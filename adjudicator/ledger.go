@@ -3,6 +3,7 @@
 package adjudicator
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -36,7 +37,11 @@ type (
 		PutState(*StateReg) error
 	}
 
-	StateReg struct {
+	StateReg stateReg
+
+	// stateReg is the actual StateReg struct, but without any methods as to make
+	// json.Unmarshal work.
+	stateReg struct {
 		*channel.State
 		Timeout Timestamp
 	}
@@ -82,4 +87,10 @@ func (s *StateReg) Clone() *StateReg {
 		State:   s.State.Clone(),
 		Timeout: s.Timeout.Clone(),
 	}
+}
+
+func (s *StateReg) UnmarshalJSON(data []byte) error {
+	s.Timeout = NewTimestamp()
+	s.State = new(channel.State)
+	return json.Unmarshal(data, (*stateReg)(s))
 }
