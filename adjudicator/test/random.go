@@ -11,7 +11,7 @@ import (
 
 func RandomStateReg(rng *rand.Rand, opts ...chtest.RandomOpt) *adjudicator.StateReg {
 	return &adjudicator.StateReg{
-		State:   chtest.NewRandomState(rng, opts...),
+		State:   chtest.NewRandomState(rng, append(opts, chtest.WithoutApp())...),
 		Timeout: adjudicator.StdNow(), // random enough...
 	}
 }
