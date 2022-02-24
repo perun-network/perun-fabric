@@ -23,6 +23,10 @@ type (
 	StdTimestamp time.Time
 )
 
+func IDKey(id channel.ID) string {
+	return hex.EncodeToString(id[:])
+}
+
 func FundingKey(id channel.ID, addr wallet.Address) string {
 	return fmt.Sprintf("%x:%s", id, addr)
 }
@@ -34,7 +38,7 @@ func StdNow() *StdTimestamp {
 
 func (t StdTimestamp) Time() time.Time { return (time.Time)(t) }
 
-func asTime(t Timestamp) time.Time { return t.(StdTimestamp).Time() }
+func asTime(t Timestamp) time.Time { return t.(*StdTimestamp).Time() }
 
 func (t StdTimestamp) Equal(other Timestamp) bool {
 	return t.Time().Equal(asTime(other))
@@ -63,7 +67,7 @@ func (t *StdTimestamp) Clone() Timestamp {
 func (m *MemLedger) GetState(id channel.ID) (*StateReg, error) {
 	s, ok := m.states[id]
 	if !ok {
-		return nil, &NotFoundError{Key: hex.EncodeToString(id[:]), Type: "StateReg"}
+		return nil, &NotFoundError{Key: IDKey(id), Type: "StateReg"}
 	}
 	return s.Clone(), nil
 }
