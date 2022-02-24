@@ -27,7 +27,10 @@ func FundingKey(id channel.ID, addr wallet.Address) string {
 	return fmt.Sprintf("%x:%s", id, addr)
 }
 
-func StdNow() StdTimestamp { return StdTimestamp(time.Now()) }
+func StdNow() *StdTimestamp {
+	now := time.Now()
+	return (*StdTimestamp)(&now)
+}
 
 func (t StdTimestamp) Time() time.Time { return (time.Time)(t) }
 
@@ -52,10 +55,9 @@ func NewMemLedger() *MemLedger {
 	}
 }
 
-// Clone returns t itself, which is a proper clone. Note that time.Time is to be
-// used like a scalar.
-func (t StdTimestamp) Clone() Timestamp {
-	return t
+func (t *StdTimestamp) Clone() Timestamp {
+	c := *t
+	return &c
 }
 
 func (m *MemLedger) GetState(id channel.ID) (*StateReg, error) {
@@ -85,7 +87,7 @@ func (m *MemLedger) PutHolding(id channel.ID, addr wallet.Address, holding *big.
 	return nil
 }
 
-// Now returns time.Now()
+// Now returns time.Now() as a Timestamp
 func (m *MemLedger) Now() Timestamp {
 	return StdNow()
 }

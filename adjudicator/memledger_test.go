@@ -4,6 +4,7 @@ package adjudicator_test
 
 import (
 	"testing"
+	"time"
 
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
@@ -36,6 +37,12 @@ func TestStdTime(t *testing.T) {
 		assert.True(t, t0.Before(t1))
 		assert.False(t, t0.Before(t0))
 		assert.False(t, t1.Before(t0))
+	})
+
+	t.Run("Clone", func(t *testing.T) {
+		t0c := t0.Clone().(*adj.StdTimestamp)
+		(*t0c) = (adj.StdTimestamp)(t0c.Time().Add(time.Hour))
+		assert.False(t, t0c.Equal(t0))
 	})
 }
 
