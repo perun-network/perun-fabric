@@ -13,3 +13,5 @@
 
 # Go generate output
 *.bin-runtime
+
+vendor/
