@@ -3,7 +3,6 @@
 package adjudicator
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -35,15 +34,6 @@ type (
 	StateLedger interface {
 		GetState(channel.ID) (*StateReg, error)
 		PutState(*StateReg) error
-	}
-
-	StateReg stateReg
-
-	// stateReg is the actual StateReg struct, but without any methods as to make
-	// json.Unmarshal work.
-	stateReg struct {
-		*channel.State
-		Timeout Timestamp
 	}
 
 	HoldingLedger interface {
@@ -80,17 +70,4 @@ func IsNotFoundError(err error) bool {
 
 func (err *NotFoundError) Error() string {
 	return fmt.Sprintf("no entry for %q at %q", err.Type, err.Key)
-}
-
-func (s *StateReg) Clone() *StateReg {
-	return &StateReg{
-		State:   s.State.Clone(),
-		Timeout: s.Timeout.Clone(),
-	}
-}
-
-func (s *StateReg) UnmarshalJSON(data []byte) error {
-	s.Timeout = NewTimestamp()
-	s.State = new(channel.State)
-	return json.Unmarshal(data, (*stateReg)(s))
 }

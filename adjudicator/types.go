@@ -21,5 +21,32 @@ type (
 		IsFinal  bool          `json:"final"`
 	}
 
+	// Address is the concrete address type used.
+	// Unfortunately, this has to be set because fabric-gateway has strong
+	// limitations on what types can cross the chaincode API boundary.
 	Address = wallet.Address
+
+	StateReg struct {
+		State
+		Timeout *RegTimestamp
+	}
+
+	// RegTimestamp is the concrete timestamp type used in the registry.
+	// Unfortunately, this has to be set because fabric-gateway has strong
+	// limitations on what types can cross the chaincode API boundary.
+	RegTimestamp = StdTimestamp
 )
+
+func (s State) Clone() State {
+	bals := channel.CloneBals(s.Balances)
+	s.Balances = bals
+	// Other fields are value types, so done
+	return s
+}
+
+func (s *StateReg) Clone() *StateReg {
+	return &StateReg{
+		State:   s.State.Clone(),
+		Timeout: s.Timeout.Clone().(*RegTimestamp),
+	}
+}
