@@ -60,10 +60,10 @@ func (a *AssetHolder) Holding(id channel.ID, part wallet.Address) (*big.Int, err
 
 // TotalHolding returns the total amount deposited into the channel specified by
 // `params`.
-func (a *AssetHolder) TotalHolding(params *channel.Params) (*big.Int, error) {
+func (a *AssetHolder) TotalHolding(id channel.ID, parts []wallet.Address) (*big.Int, error) {
 	total := new(big.Int)
-	for _, part := range params.Parts {
-		holding, err := a.Holding(params.ID(), part)
+	for _, part := range parts {
+		holding, err := a.Holding(id, part)
 		if err != nil {
 			return nil, err
 		}
