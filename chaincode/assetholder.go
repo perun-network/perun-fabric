@@ -3,6 +3,7 @@
 package chaincode
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -21,21 +22,29 @@ func (h *AssetHolder) contract(ctx contractapi.TransactionContextInterface) *adj
 }
 
 func (h *AssetHolder) Deposit(ctx contractapi.TransactionContextInterface,
-	id channel.ID, part wallet.Address, amount *big.Int) error {
-	return h.contract(ctx).Deposit(id, part, amount)
+	id channel.ID, part adj.Address, amountStr string) error {
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
+	}
+	return h.contract(ctx).Deposit(id, &part, amount)
 }
 
 func (h *AssetHolder) Holding(ctx contractapi.TransactionContextInterface,
-	id channel.ID, part wallet.Address) (*big.Int, error) {
-	return h.contract(ctx).Holding(id, part)
+	id channel.ID, part adj.Address) (string, error) {
+	return stringWithErr(h.contract(ctx).Holding(id, &part))
 }
 
 func (h *AssetHolder) TotalHolding(ctx contractapi.TransactionContextInterface,
-	params *channel.Params) (*big.Int, error) {
-	return h.contract(ctx).TotalHolding(params)
+	id channel.ID, parts []adj.Address) (string, error) {
+	wparts := make([]wallet.Address, 0, len(parts))
+	for _, p := range parts {
+		wparts = append(wparts, &p)
+	}
+	return stringWithErr(h.contract(ctx).TotalHolding(id, wparts))
 }
 
 func (h *AssetHolder) Withdraw(ctx contractapi.TransactionContextInterface,
-	id channel.ID, part wallet.Address) (*big.Int, error) {
-	return h.contract(ctx).Withdraw(id, part)
+	id channel.ID, part adj.Address) (string, error) {
+	return stringWithErr(h.contract(ctx).Withdraw(id, &part))
 }

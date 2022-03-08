@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	cc, err := contractapi.NewChaincode(&chaincode.AssetHolder{})
+	cc, err := contractapi.NewChaincode(new(chaincode.AssetHolder))
 	if err != nil {
 		log.Panicf("Error creating AssetHolder chaincode: %v", err)
 	}
