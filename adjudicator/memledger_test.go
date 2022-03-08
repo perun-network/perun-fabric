@@ -14,8 +14,6 @@ import (
 	chtest "perun.network/go-perun/channel/test"
 	wtest "perun.network/go-perun/wallet/test"
 	"polycry.pt/poly-go/test"
-
-	_ "perun.network/go-perun/backend/sim" // init sim backend
 )
 
 func TestStdTime(t *testing.T) {
