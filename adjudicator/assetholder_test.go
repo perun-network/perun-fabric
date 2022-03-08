@@ -12,6 +12,7 @@ import (
 	"perun.network/go-perun/channel"
 	chtest "perun.network/go-perun/channel/test"
 	"perun.network/go-perun/wallet"
+	wtest "perun.network/go-perun/wallet/test"
 
 	"polycry.pt/poly-go/test"
 )
@@ -21,7 +22,7 @@ func TestAssetHolder(t *testing.T) {
 
 	t.Run("MultiDepositWithdraw", func(t *testing.T) {
 		require := require.New(t)
-		ah, id, _addrs, bals, _ := ahSetup(rng, 2)
+		ah, id, _addrs, bals := ahSetup(rng, 2)
 		addr := _addrs[0]
 
 		hzero, err := ah.Holding(id, addr)
@@ -58,9 +59,9 @@ func TestAssetHolder(t *testing.T) {
 	t.Run("TotalHolding", func(t *testing.T) {
 		const n = 3
 		require := require.New(t)
-		ah, id, addrs, bals, params := ahSetup(rng, n)
+		ah, id, addrs, bals := ahSetup(rng, n)
 
-		totalh, err := ah.TotalHolding(params)
+		totalh, err := ah.TotalHolding(id, addrs)
 		require.NoError(err)
 		require.Zero(totalh.Sign())
 
@@ -68,20 +69,18 @@ func TestAssetHolder(t *testing.T) {
 		for i, addr := range addrs {
 			require.NoError(ah.Deposit(id, addr, bals[i]))
 			total.Add(total, bals[i])
-			totalh, err = ah.TotalHolding(params)
+			totalh, err = ah.TotalHolding(id, addrs)
 			require.NoError(err)
 			require.Zero(total.Cmp(totalh))
 		}
 	})
 }
 
-func ahSetup(rng *rand.Rand, n int) (*adj.AssetHolder, channel.ID, []wallet.Address, []channel.Bal, *channel.Params) {
-	params := chtest.NewRandomParams(rng, chtest.WithNumParts(n))
+func ahSetup(rng *rand.Rand, n int) (*adj.AssetHolder, channel.ID, []wallet.Address, []channel.Bal) {
 	return memAssetHolder(),
-		params.ID(),
-		params.Parts,
-		chtest.NewRandomBals(rng, n),
-		params
+		chtest.NewRandomChannelID(rng),
+		wtest.NewRandomAddresses(rng, n),
+		chtest.NewRandomBals(rng, n)
 }
 
 func memAssetHolder() *adj.AssetHolder {
