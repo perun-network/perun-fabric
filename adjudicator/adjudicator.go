@@ -8,3 +8,10 @@ type Adjudicator struct {
 	ledger Ledger
 	assets *AssetHolder
 }
+
+func NewAdjudicator(ledger Ledger) *Adjudicator {
+	return &Adjudicator{
+		ledger: ledger,
+		assets: NewAssetHolder(ledger),
+	}
+}
