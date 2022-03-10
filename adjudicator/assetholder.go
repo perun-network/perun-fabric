@@ -72,6 +72,16 @@ func (a *AssetHolder) TotalHolding(id channel.ID, parts []wallet.Address) (*big.
 	return total, nil
 }
 
+// SetHolding sets the holding of part in channel id to holding.
+//
+// Panics if `holding` is negative.
+func (a *AssetHolder) SetHolding(id channel.ID, part wallet.Address, holding *big.Int) error {
+	if holding.Sign() == -1 {
+		panic("negative amount")
+	}
+	return a.ledger.PutHolding(id, part, holding)
+}
+
 // Withdraw resets the holdings of participant `part` in the channel of id `id`
 // to zero and returns the holdings before the reset.
 func (a *AssetHolder) Withdraw(id channel.ID, part wallet.Address) (*big.Int, error) {

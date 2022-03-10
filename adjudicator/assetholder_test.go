@@ -20,6 +20,21 @@ import (
 func TestAssetHolder(t *testing.T) {
 	rng := test.Prng(t)
 
+	t.Run("SetHolding", func(t *testing.T) {
+		require := require.New(t)
+		ah, id, _addrs, _bal := ahSetup(rng, 1)
+		addr, bal := _addrs[0], _bal[0]
+
+		hzero, err := ah.Holding(id, addr)
+		require.NoError(err)
+		require.Zero(hzero.Sign())
+
+		require.NoError(ah.SetHolding(id, addr, bal))
+		h, err := ah.Holding(id, addr)
+		require.NoError(err)
+		require.Zero(h.Cmp(bal))
+	})
+
 	t.Run("MultiDepositWithdraw", func(t *testing.T) {
 		require := require.New(t)
 		ah, id, _addrs, bals := ahSetup(rng, 2)
