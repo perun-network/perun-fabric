@@ -11,6 +11,11 @@ type (
 		After(Timestamp) bool
 		Before(Timestamp) bool
 
+		// Add adds the given duration to the Timestamp and returns it.
+		// It is used to add challenge durations and thus should interpret the given
+		// integer accordingly.
+		Add(uint64) Timestamp
+
 		// Clone returns a clone of the Timestamp.
 		Clone() Timestamp
 	}
@@ -37,4 +42,14 @@ func (t StdTimestamp) After(other Timestamp) bool {
 
 func (t StdTimestamp) Before(other Timestamp) bool {
 	return t.Time().Before(asTime(other))
+}
+
+func (t StdTimestamp) Add(d uint64) Timestamp {
+	ts := t.Time().Add(time.Duration(d) * time.Second)
+	return (*StdTimestamp)(&ts)
+}
+
+func (t *StdTimestamp) Clone() Timestamp {
+	c := *t
+	return &c
 }

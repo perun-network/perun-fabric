@@ -31,6 +31,12 @@ func TestStdTime(t *testing.T) {
 		assert.False(t, t1.Before(t0))
 	})
 
+	t.Run("Add", func(t *testing.T) {
+		t0 := adj.StdNow()
+		t1 := t0.Add(1)
+		assert.True(t, t1.After(t0))
+	})
+
 	t.Run("Clone", func(t *testing.T) {
 		t0c := t0.Clone().(*adj.StdTimestamp)
 		(*t0c) = (adj.StdTimestamp)(t0c.Time().Add(time.Hour))

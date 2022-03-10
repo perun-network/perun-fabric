@@ -33,11 +33,6 @@ func NewMemLedger() *MemLedger {
 	}
 }
 
-func (t *StdTimestamp) Clone() Timestamp {
-	c := *t
-	return &c
-}
-
 func (m *MemLedger) GetState(id channel.ID) (*StateReg, error) {
 	s, ok := m.states[id]
 	if !ok {
