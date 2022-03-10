@@ -6,23 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"time"
 
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 )
 
 type (
-	// A Timestamp is a point in time that can be compared to others.
-	Timestamp interface {
-		Equal(Timestamp) bool
-		After(Timestamp) bool
-		Before(Timestamp) bool
-
-		// Clone returns a clone of the Timestamp.
-		Clone() Timestamp
-	}
-
 	// Ledger contains the read and write operations required by the Adjudicator.
 	Ledger interface {
 		StateLedger
@@ -48,20 +37,6 @@ type (
 		Type string
 	}
 )
-
-var newTimestamp = func() Timestamp { return (*StdTimestamp)(new(time.Time)) }
-
-func NewTimestamp() Timestamp { return newTimestamp() }
-
-// SetTimestampConstructor can be used in any init() function to set the
-// constructor returning new Timestamp instances of the concrete type used in
-// the current runtime context. It is used during JSON unmarshaling. The set
-// function can be accessed via NewTimestamp.
-//
-// By default, it returns instances of (*StdTimestamp)(new(time.Time)).
-func SetTimestampConstructor(newts func() Timestamp) {
-	newTimestamp = newts
-}
 
 func IsNotFoundError(err error) bool {
 	notFoundErr := new(NotFoundError)

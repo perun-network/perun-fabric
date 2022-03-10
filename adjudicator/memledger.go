@@ -6,22 +6,17 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"time"
 
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 )
 
-type (
-	// MemLedger is a simple in-memory ledger, using Go maps.
-	// time.Time is used as Timestamps.
-	MemLedger struct {
-		states   map[channel.ID]*StateReg
-		holdings map[string]*big.Int
-	}
-
-	StdTimestamp time.Time
-)
+// MemLedger is a simple in-memory ledger, using Go maps.
+// time.Time is used as Timestamps.
+type MemLedger struct {
+	states   map[channel.ID]*StateReg
+	holdings map[string]*big.Int
+}
 
 func IDKey(id channel.ID) string {
 	return hex.EncodeToString(id[:])
@@ -29,27 +24,6 @@ func IDKey(id channel.ID) string {
 
 func FundingKey(id channel.ID, addr wallet.Address) string {
 	return fmt.Sprintf("%x:%s", id, addr)
-}
-
-func StdNow() *StdTimestamp {
-	now := time.Now()
-	return (*StdTimestamp)(&now)
-}
-
-func (t StdTimestamp) Time() time.Time { return (time.Time)(t) }
-
-func asTime(t Timestamp) time.Time { return t.(*StdTimestamp).Time() }
-
-func (t StdTimestamp) Equal(other Timestamp) bool {
-	return t.Time().Equal(asTime(other))
-}
-
-func (t StdTimestamp) After(other Timestamp) bool {
-	return t.Time().After(asTime(other))
-}
-
-func (t StdTimestamp) Before(other Timestamp) bool {
-	return t.Time().Before(asTime(other))
 }
 
 func NewMemLedger() *MemLedger {
