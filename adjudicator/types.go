@@ -39,6 +39,25 @@ type (
 	RegTimestamp = StdTimestamp
 )
 
+func (p Params) ID() channel.ID {
+	return channel.CalcID(p.CoreParams())
+}
+
+// CoreParams returns the equivalent representation of p as channel.Params.
+// The returned Params is set to have no App, LedgerChannel is set to true and
+// VirtualChannel is set to false.
+//
+// It is not a deep copy, e.g., field Parts references the same participants.
+func (p Params) CoreParams() *channel.Params {
+	return &channel.Params{
+		ChallengeDuration: p.ChallengeDuration,
+		Parts:             AsWalletAddresses(p.Parts),
+		Nonce:             p.Nonce,
+		App:               channel.NoApp(),
+		LedgerChannel:     true,
+	}
+}
+
 func AsWalletAddresses(as []Address) []wallet.Address {
 	was := make([]wallet.Address, 0, len(as))
 	for _, a := range as {
