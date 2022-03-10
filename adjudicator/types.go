@@ -24,6 +24,12 @@ type (
 		IsFinal  bool          `json:"final"`
 	}
 
+	SignedChannel struct {
+		Params Params
+		State  State
+		Sigs   []wallet.Sig
+	}
+
 	// Address is the concrete address type used.
 	// Unfortunately, this has to be set because fabric-gateway has strong
 	// limitations on what types can cross the chaincode API boundary.
