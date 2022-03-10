@@ -36,17 +36,18 @@ func (a *Adjudicator) Register(ch *SignedChannel) error {
 	}
 	id := ch.State.ID
 
-	// TODO:
-	// - Check for existing registered channel
-	//   - Check its timeout
-	//   - Check version increase
+	// Check existing state registration for non-final channels
+	if !ch.State.IsFinal {
+		if err := a.checkExistingStateReg(ch); err != nil {
+			return err
+		}
+	}
 
+	// check channel funding
 	total, err := a.assets.TotalHolding(id, AsWalletAddresses(ch.Params.Parts))
 	if err != nil {
 		return fmt.Errorf("querying total holding: %w", err)
 	}
-
-	// check underfunded channel
 	if chTotal := ch.State.Total(); total.Cmp(chTotal) == -1 {
 		// allow version 0 underfunded channels for funds recovery
 		if ch.State.Version != 0 {
@@ -57,22 +58,37 @@ func (a *Adjudicator) Register(ch *SignedChannel) error {
 			}
 		}
 	} else {
+		// Update holdings to current state in all other cases so that they can be
+		// withdrawn once the channel is finalized.
 		if err := a.updateHoldings(ch); err != nil {
 			return err
 		}
 	}
 
-	// determine timeout by channel finality
-	to := a.ledger.Now().(StdTimestamp)
-	if ch.State.IsFinal {
-		to = to.Add(ch.Params.ChallengeDuration).(RegTimestamp)
+	a.saveStateReg(ch)
+	return nil
+}
+
+func (a *Adjudicator) checkExistingStateReg(ch *SignedChannel) error {
+	reg, ok := a.states[ch.State.ID]
+	if !ok {
+		return nil
 	}
 
-	// save state to states registry
-	a.states[id] = &StateReg{
-		State:   ch.State,
-		Timeout: to,
+	if now := a.ledger.Now(); now.After(reg.Timeout) {
+		return ChallengeTimeoutError{
+			Timeout: reg.Timeout,
+			Now:     now.(RegTimestamp),
+		}
 	}
+
+	if ver := ch.State.Version; ver <= reg.Version {
+		return VersionError{
+			Registered: reg.Version,
+			Tried:      ver,
+		}
+	}
+
 	return nil
 }
 
@@ -83,6 +99,20 @@ func (a *Adjudicator) updateHoldings(ch *SignedChannel) error {
 		}
 	}
 	return nil
+}
+
+func (a *Adjudicator) saveStateReg(ch *SignedChannel) {
+	// determine timeout by channel finality
+	to := a.ledger.Now().(RegTimestamp)
+	if !ch.State.IsFinal {
+		to = to.Add(ch.Params.ChallengeDuration).(RegTimestamp)
+	}
+
+	// save state to states registry
+	a.states[ch.State.ID] = &StateReg{
+		State:   ch.State,
+		Timeout: to,
+	}
 }
 
 func ValidateChannel(ch *SignedChannel) error {
