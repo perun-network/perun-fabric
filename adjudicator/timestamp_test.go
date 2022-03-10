@@ -38,8 +38,8 @@ func TestStdTime(t *testing.T) {
 	})
 
 	t.Run("Clone", func(t *testing.T) {
-		t0c := t0.Clone().(*adj.StdTimestamp)
-		(*t0c) = (adj.StdTimestamp)(t0c.Time().Add(time.Hour))
+		t0c := t0.Clone().(adj.StdTimestamp)
+		t0c = (adj.StdTimestamp)(t0c.Time().Add(time.Hour))
 		assert.False(t, t0c.Equal(t0))
 	})
 }

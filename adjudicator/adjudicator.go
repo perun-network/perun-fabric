@@ -63,9 +63,9 @@ func (a *Adjudicator) Register(ch *SignedChannel) error {
 	}
 
 	// determine timeout by channel finality
-	to := a.ledger.Now().(*StdTimestamp)
+	to := a.ledger.Now().(StdTimestamp)
 	if ch.State.IsFinal {
-		to = to.Add(ch.Params.ChallengeDuration).(*RegTimestamp)
+		to = to.Add(ch.Params.ChallengeDuration).(RegTimestamp)
 	}
 
 	// save state to states registry

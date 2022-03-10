@@ -37,7 +37,7 @@ type (
 
 	StateReg struct {
 		State
-		Timeout *RegTimestamp
+		Timeout RegTimestamp
 	}
 
 	// RegTimestamp is the concrete timestamp type used in the registry.
@@ -112,6 +112,6 @@ func (s State) Clone() State {
 func (s *StateReg) Clone() *StateReg {
 	return &StateReg{
 		State:   s.State.Clone(),
-		Timeout: s.Timeout.Clone().(*RegTimestamp),
+		Timeout: s.Timeout.Clone().(RegTimestamp),
 	}
 }

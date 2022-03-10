@@ -23,14 +23,13 @@ type (
 	StdTimestamp time.Time
 )
 
-func StdNow() *StdTimestamp {
-	now := time.Now()
-	return (*StdTimestamp)(&now)
+func StdNow() StdTimestamp {
+	return (StdTimestamp)(time.Now())
 }
 
 func (t StdTimestamp) Time() time.Time { return (time.Time)(t) }
 
-func asTime(t Timestamp) time.Time { return t.(*StdTimestamp).Time() }
+func asTime(t Timestamp) time.Time { return t.(StdTimestamp).Time() }
 
 func (t StdTimestamp) Equal(other Timestamp) bool {
 	return t.Time().Equal(asTime(other))
@@ -46,10 +45,9 @@ func (t StdTimestamp) Before(other Timestamp) bool {
 
 func (t StdTimestamp) Add(d uint64) Timestamp {
 	ts := t.Time().Add(time.Duration(d) * time.Second)
-	return (*StdTimestamp)(&ts)
+	return (StdTimestamp)(ts)
 }
 
-func (t *StdTimestamp) Clone() Timestamp {
-	c := *t
-	return &c
+func (t StdTimestamp) Clone() Timestamp {
+	return t
 }
