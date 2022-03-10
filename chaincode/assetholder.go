@@ -8,7 +8,6 @@ import (
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 	"perun.network/go-perun/channel"
-	"perun.network/go-perun/wallet"
 
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 )
@@ -37,10 +36,7 @@ func (h *AssetHolder) Holding(ctx contractapi.TransactionContextInterface,
 
 func (h *AssetHolder) TotalHolding(ctx contractapi.TransactionContextInterface,
 	id channel.ID, parts []adj.Address) (string, error) {
-	wparts := make([]wallet.Address, 0, len(parts))
-	for _, p := range parts {
-		wparts = append(wparts, &p)
-	}
+	wparts := adj.AsWalletAddresses(parts)
 	return stringWithErr(h.contract(ctx).TotalHolding(id, wparts))
 }
 

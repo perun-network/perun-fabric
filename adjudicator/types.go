@@ -37,6 +37,13 @@ type (
 	RegTimestamp = StdTimestamp
 )
 
+func AsWalletAddresses(as []Address) []wallet.Address {
+	was := make([]wallet.Address, 0, len(as))
+	for _, a := range as {
+		was = append(was, &a)
+	}
+	return was
+}
 func (s State) Clone() State {
 	bals := channel.CloneBals(s.Balances)
 	s.Balances = bals
