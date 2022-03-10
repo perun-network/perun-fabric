@@ -108,19 +108,3 @@ func ValidateChannel(ch *SignedChannel) error {
 
 	return nil
 }
-
-type ValidationError struct{ error }
-
-func (ve ValidationError) Unwrap() error {
-	return ve.error
-}
-
-type UnderfundedError struct {
-	Version uint64
-	Total   *big.Int
-	Funded  *big.Int
-}
-
-func (ue UnderfundedError) Error() string {
-	return fmt.Sprintf("channel underfunded (%v < %v, version %d)", ue.Funded, ue.Total, ue.Version)
-}
