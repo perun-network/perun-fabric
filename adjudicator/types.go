@@ -2,7 +2,9 @@ package adjudicator
 
 import (
 	"perun.network/go-perun/backend/ethereum/wallet"
+	ethwallet "perun.network/go-perun/backend/ethereum/wallet"
 	"perun.network/go-perun/channel"
+	"perun.network/go-perun/wallet"
 
 	_ "perun.network/go-perun/backend/ethereum"
 )
@@ -24,7 +26,7 @@ type (
 	// Address is the concrete address type used.
 	// Unfortunately, this has to be set because fabric-gateway has strong
 	// limitations on what types can cross the chaincode API boundary.
-	Address = wallet.Address
+	Address = ethwallet.Address
 
 	StateReg struct {
 		State
