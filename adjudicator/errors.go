@@ -14,8 +14,8 @@ type (
 	ValidationError struct{ error }
 
 	ChallengeTimeoutError struct {
-		Timeout RegTimestamp
-		Now     RegTimestamp
+		Timeout Timestamp
+		Now     Timestamp
 	}
 
 	VersionError struct {

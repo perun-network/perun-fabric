@@ -30,16 +30,7 @@ func RandomState(rng *rand.Rand) *adj.State {
 func RandomParams(rng *rand.Rand) *adj.Params {
 	return &adj.Params{
 		ChallengeDuration: rng.Uint64(),
-		Parts:             RandomAddresses(rng, 2),
+		Parts:             wtest.NewRandomAddresses(rng, 2),
 		Nonce:             new(big.Int).SetUint64(rng.Uint64()),
 	}
-}
-
-func RandomAddresses(rng *rand.Rand, n int) []adj.Address {
-	as := make([]adj.Address, 0, n)
-	for i := 0; i < n; i++ {
-		a := wtest.NewRandomAddress(rng).(*adj.Address)
-		as = append(as, *a)
-	}
-	return as
 }

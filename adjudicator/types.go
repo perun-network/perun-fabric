@@ -1,20 +1,19 @@
 package adjudicator
 
 import (
+	"encoding/json"
+	"fmt"
 	"math/big"
 
-	ethwallet "perun.network/go-perun/backend/ethereum/wallet"
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
-
-	_ "perun.network/go-perun/backend/ethereum"
 )
 
 type (
 	Params struct {
-		ChallengeDuration uint64        `json:"challengeDuration"`
-		Parts             []Address     `json:"parts"`
-		Nonce             channel.Nonce `json:"nonce"`
+		ChallengeDuration uint64           `json:"challengeDuration"`
+		Parts             []wallet.Address `json:"parts"`
+		Nonce             channel.Nonce    `json:"nonce"`
 	}
 
 	State struct {
@@ -25,25 +24,15 @@ type (
 	}
 
 	SignedChannel struct {
-		Params Params
-		State  State
-		Sigs   []wallet.Sig
+		Params Params       `json:"params"`
+		State  State        `json:"state"`
+		Sigs   []wallet.Sig `json:"sigs"`
 	}
-
-	// Address is the concrete address type used.
-	// Unfortunately, this has to be set because fabric-gateway has strong
-	// limitations on what types can cross the chaincode API boundary.
-	Address = ethwallet.Address
 
 	StateReg struct {
-		State
-		Timeout RegTimestamp
+		State   `json:"state"`
+		Timeout Timestamp `json:"timeout"`
 	}
-
-	// RegTimestamp is the concrete timestamp type used in the registry.
-	// Unfortunately, this has to be set because fabric-gateway has strong
-	// limitations on what types can cross the chaincode API boundary.
-	RegTimestamp = StdTimestamp
 )
 
 func (p Params) ID() channel.ID {
@@ -58,19 +47,37 @@ func (p Params) ID() channel.ID {
 func (p Params) CoreParams() *channel.Params {
 	return &channel.Params{
 		ChallengeDuration: p.ChallengeDuration,
-		Parts:             AsWalletAddresses(p.Parts),
+		Parts:             p.Parts,
 		Nonce:             p.Nonce,
 		App:               channel.NoApp(),
 		LedgerChannel:     true,
 	}
 }
 
-func AsWalletAddresses(as []Address) []wallet.Address {
-	was := make([]wallet.Address, 0, len(as))
-	for _, a := range as {
-		was = append(was, &a)
+func (p *Params) UnmarshalJSON(data []byte) error {
+	var pj struct {
+		ChallengeDuration uint64            `json:"challengeDuration"`
+		Parts             []json.RawMessage `json:"parts"`
+		Nonce             channel.Nonce     `json:"nonce"`
 	}
-	return was
+	if err := json.Unmarshal(data, &pj); err != nil {
+		return err
+	}
+
+	p.ChallengeDuration = pj.ChallengeDuration
+	p.Nonce = pj.Nonce
+	p.Parts = make([]wallet.Address, 0, len(pj.Parts))
+	for i, rawp := range pj.Parts {
+		part := wallet.NewAddress()
+		// Hide Address interface to make json.Unmarshaler visible of concrete
+		// Address implementation.
+		parti := part.(interface{})
+		if err := json.Unmarshal(rawp, &parti); err != nil {
+			return fmt.Errorf("unmarshaling part[%d]: %w", i, err)
+		}
+		p.Parts = append(p.Parts, part)
+	}
+	return nil
 }
 
 // CoreState returns the equivalent representation of s as channel.State.
@@ -112,8 +119,30 @@ func (s State) Clone() State {
 func (s *StateReg) Clone() *StateReg {
 	return &StateReg{
 		State:   s.State.Clone(),
-		Timeout: s.Timeout.Clone().(RegTimestamp),
+		Timeout: s.Timeout.Clone(),
 	}
+}
+
+func (s *StateReg) UnmarshalJSON(data []byte) error {
+	sj := struct {
+		State   *State          `json:"state"`
+		Timeout json.RawMessage `json:"timeout"`
+	}{
+		State: &s.State,
+	}
+	if err := json.Unmarshal(data, &sj); err != nil {
+		return err
+	}
+
+	timeout := NewTimestamp()
+	// Hide Timestamp interface to make json.Unmarshaler visible of concrete
+	// Timestamp implementation.
+	toi := timeout.(interface{})
+	if err := json.Unmarshal(sj.Timeout, &toi); err != nil {
+		return err
+	}
+	s.Timeout = timeout
+	return nil
 }
 
 func (s *StateReg) IsFinalizedAt(ts Timestamp) bool {

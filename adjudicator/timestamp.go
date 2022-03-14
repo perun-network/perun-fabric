@@ -2,7 +2,9 @@
 
 package adjudicator
 
-import "time"
+import (
+	"time"
+)
 
 type (
 	// A Timestamp is a point in time that can be compared to others.
@@ -22,6 +24,20 @@ type (
 
 	StdTimestamp time.Time
 )
+
+var newTimestamp = func() Timestamp { return StdTimestamp(time.Time{}) }
+
+// NewTimestamp returns new Timestamp instances used during json unmarshaling of
+// structs containing a Timestamp, e.g., StateRegs.
+//
+// It returns StdTimestamp instances by default.
+func NewTimestamp() Timestamp { return newTimestamp() }
+
+// SetNewTimestamp sets the Timestamp factory used during json unmarshaling of
+// structs containing a Timestamp, e.g., StateRegs.
+//
+// It is set to return StdTimestamp instances by default.
+func SetNewTimestamp(newts func() Timestamp) { newTimestamp = newts }
 
 func StdNow() StdTimestamp {
 	return (StdTimestamp)(time.Now())
@@ -50,4 +66,12 @@ func (t StdTimestamp) Add(d uint64) Timestamp {
 
 func (t StdTimestamp) Clone() Timestamp {
 	return t
+}
+
+func (t StdTimestamp) MarshalJSON() ([]byte, error) {
+	return (time.Time)(t).MarshalJSON()
+}
+
+func (t *StdTimestamp) UnmarshalJSON(data []byte) error {
+	return (*time.Time)(t).UnmarshalJSON(data)
 }
