@@ -8,6 +8,8 @@ import (
 	"math/big"
 )
 
+var ErrUnknownChannel = errors.New("unknown channel")
+
 type (
 	ValidationError struct{ error }
 

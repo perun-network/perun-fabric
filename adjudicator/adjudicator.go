@@ -115,6 +115,21 @@ func (a *Adjudicator) saveStateReg(ch *SignedChannel) {
 	}
 }
 
+// Withdraw withdraws all funds of participant part in the finalized channel id
+// to themself via the AssetHolder. It returns the withdrawn amount.
+func (a *Adjudicator) Withdraw(id channel.ID, part Address) (*big.Int, error) {
+	if reg, ok := a.states[id]; !ok {
+		return nil, ErrUnknownChannel
+	} else if now := a.ledger.Now(); !reg.IsFinalizedAt(now) {
+		return nil, ChallengeTimeoutError{
+			Timeout: reg.Timeout,
+			Now:     now.(RegTimestamp),
+		}
+	}
+
+	return a.assets.Withdraw(id, &part)
+}
+
 func ValidateChannel(ch *SignedChannel) error {
 	if ch.Params.ID() != ch.State.ID {
 		return ValidationError{errors.New("channel id mismatch")}

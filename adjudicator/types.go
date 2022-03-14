@@ -115,3 +115,7 @@ func (s *StateReg) Clone() *StateReg {
 		Timeout: s.Timeout.Clone().(RegTimestamp),
 	}
 }
+
+func (s *StateReg) IsFinalizedAt(ts Timestamp) bool {
+	return s.IsFinal || ts.After(s.Timeout)
+}
