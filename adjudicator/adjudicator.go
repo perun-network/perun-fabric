@@ -16,14 +16,12 @@ import (
 type Adjudicator struct {
 	ledger Ledger
 	assets *AssetHolder
-	states map[channel.ID]*StateReg
 }
 
 func NewAdjudicator(ledger Ledger) *Adjudicator {
 	return &Adjudicator{
 		ledger: ledger,
 		assets: NewAssetHolder(ledger),
-		states: make(map[channel.ID]*StateReg),
 	}
 }
 
@@ -66,14 +64,15 @@ func (a *Adjudicator) Register(ch *SignedChannel) error {
 		}
 	}
 
-	a.saveStateReg(ch)
-	return nil
+	return a.saveStateReg(ch)
 }
 
 func (a *Adjudicator) checkExistingStateReg(ch *SignedChannel) error {
-	reg, ok := a.states[ch.State.ID]
-	if !ok {
+	reg, err := a.ledger.GetState(ch.State.ID)
+	if IsNotFoundError(err) {
 		return nil
+	} else if err != nil {
+		return fmt.Errorf("querying ledger: %w", err)
 	}
 
 	if now := a.ledger.Now(); now.After(reg.Timeout) {
@@ -102,25 +101,35 @@ func (a *Adjudicator) updateHoldings(ch *SignedChannel) error {
 	return nil
 }
 
-func (a *Adjudicator) saveStateReg(ch *SignedChannel) {
+func (a *Adjudicator) saveStateReg(ch *SignedChannel) error {
 	// determine timeout by channel finality
 	to := a.ledger.Now()
 	if !ch.State.IsFinal {
 		to = to.Add(ch.Params.ChallengeDuration)
 	}
 
-	// save state to states registry
-	a.states[ch.State.ID] = &StateReg{
+	// save StateReg to ledger
+	return a.ledger.PutState(&StateReg{
 		State:   ch.State,
 		Timeout: to,
+	})
+}
+
+func (a *Adjudicator) StateReg(id channel.ID) (*StateReg, error) {
+	reg, err := a.ledger.GetState(id)
+	if IsNotFoundError(err) {
+		return nil, ErrUnknownChannel
+	} else if err != nil {
+		return nil, fmt.Errorf("querying ledger: %w", err)
 	}
+	return reg, nil
 }
 
 // Withdraw withdraws all funds of participant part in the finalized channel id
 // to themself via the AssetHolder. It returns the withdrawn amount.
 func (a *Adjudicator) Withdraw(id channel.ID, part wallet.Address) (*big.Int, error) {
-	if reg, ok := a.states[id]; !ok {
-		return nil, ErrUnknownChannel
+	if reg, err := a.StateReg(id); err != nil {
+		return nil, err
 	} else if now := a.ledger.Now(); !reg.IsFinalizedAt(now) {
 		return nil, ChallengeTimeoutError{
 			Timeout: reg.Timeout,
