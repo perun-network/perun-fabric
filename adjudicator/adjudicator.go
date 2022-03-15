@@ -29,6 +29,14 @@ func (a *Adjudicator) Deposit(id channel.ID, part wallet.Address, amount *big.In
 	return a.assets.Deposit(id, part, amount)
 }
 
+func (a *Adjudicator) Holding(id channel.ID, part wallet.Address) (*big.Int, error) {
+	return a.assets.Holding(id, part)
+}
+
+func (a *Adjudicator) TotalHolding(id channel.ID, parts []wallet.Address) (*big.Int, error) {
+	return a.assets.TotalHolding(id, parts)
+}
+
 func (a *Adjudicator) Register(ch *SignedChannel) error {
 	if err := ValidateChannel(ch); err != nil {
 		return err
