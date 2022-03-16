@@ -14,7 +14,7 @@ import (
 	wtest "perun.network/go-perun/wallet/test"
 	"polycry.pt/poly-go/test"
 
-	_ "perun.network/go-perun/backend/ethereum" // init sim backend
+	_ "perun.network/go-perun/backend/ethereum" // init ethereum backend
 
 	"github.com/perun-network/perun-fabric/tests"
 )
