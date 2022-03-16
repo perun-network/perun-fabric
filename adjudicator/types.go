@@ -153,3 +153,11 @@ func (s *StateReg) UnmarshalJSON(data []byte) error {
 func (s *StateReg) IsFinalizedAt(ts Timestamp) bool {
 	return s.IsFinal || ts.After(s.Timeout)
 }
+
+func (ch *SignedChannel) Clone() *SignedChannel {
+	return &SignedChannel{
+		Params: ch.Params.Clone(),
+		State:  ch.State.Clone(),
+		Sigs:   wallet.CloneSigs(ch.Sigs),
+	}
+}
