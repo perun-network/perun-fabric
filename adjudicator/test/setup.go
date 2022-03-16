@@ -87,3 +87,9 @@ func Funded(s *Setup) {
 func WithFinalState(s *Setup) {
 	s.State.IsFinal = true
 }
+
+func WithVersion(v uint64) SetupOption {
+	return func(s *Setup) {
+		s.State.Version = v
+	}
+}
