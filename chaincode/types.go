@@ -3,6 +3,7 @@
 package chaincode
 
 import (
+	_ "perun.network/go-perun/backend/ethereum" // init ethereum backend
 	ethwallet "perun.network/go-perun/backend/ethereum/wallet"
 	"perun.network/go-perun/wallet"
 
