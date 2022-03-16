@@ -6,9 +6,10 @@ import (
 	"math/big"
 	"math/rand"
 
-	adj "github.com/perun-network/perun-fabric/adjudicator"
 	chtest "perun.network/go-perun/channel/test"
 	wtest "perun.network/go-perun/wallet/test"
+
+	adj "github.com/perun-network/perun-fabric/adjudicator"
 )
 
 func RandomStateReg(rng *rand.Rand, opts ...chtest.RandomOpt) *adj.StateReg {
