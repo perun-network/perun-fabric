@@ -90,7 +90,8 @@ func (a *Adjudicator) checkExistingStateReg(ch *SignedChannel) error {
 		}
 	}
 
-	if ver := ch.State.Version; ver <= reg.Version {
+	// allow registration of same version for idempotence of Register
+	if ver := ch.State.Version; ver < reg.Version {
 		return VersionError{
 			Registered: reg.Version,
 			Tried:      ver,
