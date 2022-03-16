@@ -9,6 +9,7 @@ export FABRIC_SAMPLES_DIR="${FABRIC_SAMPLES_DIR:-../fabric-samples}"
 export TEST_NETWORK_DIR="${FABRIC_SAMPLES_DIR}/test-network"
 export NETWORK_CMD="${TEST_NETWORK_DIR}/network.sh"
 export CHAINCODE="$1"
+export CC_INSTANCE="${CHAINCODE}-$RANDOM"
 
 if [ -z "${CHAINCODE}" ]; then
   echo "Usage: $0 <chaincode>|down"
@@ -31,12 +32,12 @@ function networkDown() {
 }
 
 function deployCC() {
-  "${NETWORK_CMD}" deployCC -ccn $CHAINCODE -ccp "${ORIGIN}/chaincode/$CHAINCODE/" -ccl go
+  "${NETWORK_CMD}" deployCC -ccn $CC_INSTANCE -ccp "${ORIGIN}/chaincode/$CHAINCODE/" -ccl go
 }
 
 function runTest() {
   cd "${ORIGIN}"
-  go run "./tests/${CHAINCODE}"
+  go run "./tests/${CHAINCODE}" -chaincode $CC_INSTANCE
 }
 
 function e2e() {
