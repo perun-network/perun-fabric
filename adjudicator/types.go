@@ -86,8 +86,9 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 }
 
 // CoreState returns the equivalent representation of s as channel.State.
-// The returned State is set to have no App, contains one asset that is default
-// initialized and this first assets' balances are set to the Balances of s.
+// The returned State is set to have no App, no Data, contains one asset that is
+// default initialized and this first assets' balances are set to the Balances
+// of s.
 //
 // Use the State returned by CoreState to create or verify signatures with the
 // go-perun channel backend.
@@ -99,6 +100,7 @@ func (s State) CoreState() *channel.State {
 		ID:      s.ID,
 		Version: s.Version,
 		App:     channel.NoApp(),
+		Data:    channel.NoData(),
 		Allocation: channel.Allocation{
 			Assets:   []channel.Asset{channel.NewAsset()},
 			Balances: channel.Balances{s.Balances},
@@ -119,6 +121,14 @@ func (s State) Clone() State {
 	s.Balances = bals
 	// Other fields are value types, so done
 	return s
+}
+
+func (s State) Sign(acc wallet.Account) (wallet.Sig, error) {
+	return channel.Sign(acc, s.CoreState())
+}
+
+func VerifySig(signer wallet.Address, state State, sig wallet.Sig) (bool, error) {
+	return channel.Verify(signer, state.CoreState(), sig)
 }
 
 func (s *StateReg) Clone() *StateReg {
@@ -152,6 +162,25 @@ func (s *StateReg) UnmarshalJSON(data []byte) error {
 
 func (s *StateReg) IsFinalizedAt(ts Timestamp) bool {
 	return s.IsFinal || ts.After(s.Timeout)
+}
+
+// SignChannel creates signatures on the provided channel state for each
+// provided account. The signatures are in the same order as the accounts.
+func SignChannel(params Params, state State, accs []wallet.Account) (*SignedChannel, error) {
+	sigs := make([]wallet.Sig, 0, len(accs))
+	for i, acc := range accs {
+		sig, err := state.Sign(acc)
+		if err != nil {
+			return nil, fmt.Errorf("signing state with account[%d]: %w", i, err)
+		}
+		sigs = append(sigs, sig)
+	}
+
+	return &SignedChannel{
+		Params: params,
+		State:  state,
+		Sigs:   sigs,
+	}, nil
 }
 
 func (ch *SignedChannel) Clone() *SignedChannel {

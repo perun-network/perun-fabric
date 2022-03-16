@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
+	wtest "perun.network/go-perun/wallet/test"
 	"polycry.pt/poly-go/test"
 
 	adj "github.com/perun-network/perun-fabric/adjudicator"
@@ -20,4 +21,15 @@ func TestStateRegJSONMarshaling(t *testing.T) {
 	sr1 := new(adj.StateReg)
 	require.NoError(t, json.Unmarshal(data, sr1))
 	require.Zero(t, deep.Equal(sr, sr1))
+}
+
+func TestStateSigning(t *testing.T) {
+	rng := test.Prng(t)
+	state := adjtest.RandomState(rng)
+	acc := wtest.NewRandomAccount(rng)
+	sig, err := state.Sign(acc)
+	require.NoError(t, err)
+	ok, err := adj.VerifySig(acc.Address(), *state, sig)
+	require.NoError(t, err)
+	require.True(t, ok)
 }
