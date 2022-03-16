@@ -16,7 +16,7 @@ type AssetHolder struct {
 	contractapi.Contract
 }
 
-func (h *AssetHolder) contract(ctx contractapi.TransactionContextInterface) *adj.AssetHolder {
+func (AssetHolder) contract(ctx contractapi.TransactionContextInterface) *adj.AssetHolder {
 	return adj.NewAssetHolder(NewStubLedger(ctx))
 }
 
