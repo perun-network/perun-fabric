@@ -10,7 +10,7 @@ require (
 	github.com/hyperledger/fabric-protos-go v0.0.0-20220202165055-956c75de7b17
 	github.com/stretchr/testify v1.7.0
 	google.golang.org/grpc v1.44.0
-	perun.network/go-perun v0.9.0
+	perun.network/go-perun v0.9.1-0.20220316121441-9349d86249e0
 	polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37
 )
 
