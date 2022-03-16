@@ -35,6 +35,11 @@ type (
 	}
 )
 
+func (p Params) Clone() Params {
+	p.Parts = wallet.CloneAddresses(p.Parts)
+	return p
+}
+
 func (p Params) ID() channel.ID {
 	return channel.CalcID(p.CoreParams())
 }
