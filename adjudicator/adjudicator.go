@@ -162,7 +162,7 @@ func ValidateChannel(ch *SignedChannel) error {
 	}
 
 	for i, sig := range ch.Sigs {
-		if ok, err := channel.Verify(ch.Params.Parts[i], ch.State.CoreState(), sig); err != nil {
+		if ok, err := VerifySig(ch.Params.Parts[i], ch.State, sig); err != nil {
 			return ValidationError{fmt.Errorf("validating sig[%d]: %w", i, err)}
 		} else if !ok {
 			return ValidationError{fmt.Errorf("sig[%d] invalid", i)}
