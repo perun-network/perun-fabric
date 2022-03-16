@@ -55,14 +55,72 @@ func TestAdjudicator(t *testing.T) {
 		_, err := s.Adj.StateReg(s.State.ID)
 		require.ErrorIs(err, adj.ErrUnknownChannel)
 
+		sr := s.StateReg()
 		ch := s.SignedChannel()
 		require.NoError(s.Adj.Register(ch))
 
-		reg, err := s.Adj.StateReg(s.State.ID)
+		adjsr, err := s.Adj.StateReg(s.State.ID)
 		require.NoError(err)
-		require.Zero(deep.Equal(&adj.StateReg{
-			State:   *s.State,
-			Timeout: s.Ledger.Now(),
-		}, reg))
+		require.Zero(deep.Equal(sr, adjsr))
+	})
+
+	t.Run("Register-idempotence", func(t *testing.T) {
+		require := require.New(t)
+		s := adjtest.NewSetup(test.Prng(t), adjtest.Funded, adjtest.WithVersion(2))
+
+		sr := s.StateReg()
+		ch := s.SignedChannel()
+		require.NoError(s.Adj.Register(ch))
+		require.NoError(s.Adj.Register(ch))
+
+		adjsr, err := s.Adj.StateReg(s.State.ID)
+		require.NoError(err)
+		require.Zero(deep.Equal(sr, adjsr))
+	})
+
+	t.Run("Register-refute", func(t *testing.T) {
+		require := require.New(t)
+		s := adjtest.NewSetup(test.Prng(t), adjtest.Funded)
+
+		ch0 := s.SignedChannel()
+		require.NoError(s.Adj.Register(ch0))
+
+		// increment state's version
+		s.State.Version = 5
+		// forward clock close to dispute timeout
+		s.Ledger.AdvanceNow(s.Params.ChallengeDuration)
+
+		ch1 := s.SignedChannel()
+		sr1 := s.StateReg()
+		require.NoError(s.Adj.Register(ch1))
+
+		adjsr1, err := s.Adj.StateReg(s.State.ID)
+		require.NoError(err)
+		require.Zero(deep.Equal(sr1, adjsr1))
+	})
+
+	t.Run("Register-timeout", func(t *testing.T) {
+		require := require.New(t)
+		s := adjtest.NewSetup(test.Prng(t), adjtest.Funded)
+
+		sr0 := s.StateReg()
+		ch0 := s.SignedChannel()
+		require.NoError(s.Adj.Register(ch0))
+
+		// increment state's version
+		s.State.Version = 5
+		timeout := s.Ledger.Now().Add(s.Params.ChallengeDuration)
+		// forward clock after dispute timeout
+		s.Ledger.AdvanceNow(s.Params.ChallengeDuration + 1)
+
+		ch1 := s.SignedChannel()
+		var cterr adj.ChallengeTimeoutError
+		require.ErrorAs(s.Adj.Register(ch1), &cterr)
+		require.Equal(cterr.Now, s.Ledger.Now())
+		require.Equal(cterr.Timeout, timeout)
+
+		adjsr0, err := s.Adj.StateReg(s.State.ID)
+		require.NoError(err)
+		require.Zero(deep.Equal(sr0, adjsr0))
 	})
 }
