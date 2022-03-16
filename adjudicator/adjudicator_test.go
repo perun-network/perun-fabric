@@ -14,6 +14,11 @@ import (
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 )
 
+func TestValidateChannel(t *testing.T) {
+	s := adjtest.NewSetup(test.Prng(t))
+	require.NoError(t, adj.ValidateChannel(s.SignedChannel()))
+}
+
 func TestAdjudicator(t *testing.T) {
 	t.Run("Deposit", func(t *testing.T) {
 		require := require.New(t)
