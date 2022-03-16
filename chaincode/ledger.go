@@ -3,7 +3,9 @@ package chaincode
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/big"
+	"time"
 
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -66,9 +68,28 @@ func (l *StubLedger) PutHolding(id channel.ID, addr wallet.Address, holding *big
 	return nil
 }
 
+// maxNowDiff is the maximum allowed difference of a transaction's timestamp to
+// be considered the current block time.
+const maxNowDiff = 3 * time.Second
+
 func (l *StubLedger) Now() adj.Timestamp {
-	// TODO: Check if we should rather use l.Stub.GetTxTimestamp
-	return adj.StdNow()
+	pbts, err := l.Stub.GetTxTimestamp()
+	if err != nil {
+		log.Panicf("error getting transaction timestamp: %v", err)
+	}
+	now := pbts.AsTime()
+	localnow := time.Now()
+	if absDuration(now.Sub(localnow)) > maxNowDiff {
+		log.Panicf("transaction timestamp (%v) too far off local now (%v)", now, localnow)
+	}
+	return adj.StdTimestamp(now)
+}
+
+func absDuration(d time.Duration) time.Duration {
+	if d >= 0 {
+		return d
+	}
+	return -d
 }
 
 const orgPrefix = "network.perun."
