@@ -66,6 +66,15 @@ func (s *Setup) SignedChannel() *adj.SignedChannel {
 	return ch.Clone()
 }
 
+// StateReg returns the StateReg according to the current state and ledger's
+// now.
+func (s *Setup) StateReg() *adj.StateReg {
+	return &adj.StateReg{
+		State:   s.State.Clone(),
+		Timeout: s.Ledger.Now().Clone(),
+	}
+}
+
 func Funded(s *Setup) {
 	id := s.State.ID
 	for i, part := range s.Parts {
