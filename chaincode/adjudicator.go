@@ -50,6 +50,16 @@ func (a *Adjudicator) Register(ctx contractapi.TransactionContextInterface,
 	return a.contract(ctx).Register(&ch)
 }
 
+func (a *Adjudicator) StateReg(ctx contractapi.TransactionContextInterface,
+	id channel.ID) (string, error) {
+	reg, err := a.contract(ctx).StateReg(id)
+	if err != nil {
+		return "", err
+	}
+	regJson, err := json.Marshal(reg)
+	return string(regJson), err
+}
+
 func (a *Adjudicator) Withdraw(ctx contractapi.TransactionContextInterface,
 	id channel.ID, part Address) (string, error) {
 	return stringWithErr(a.contract(ctx).Withdraw(id, &part))
