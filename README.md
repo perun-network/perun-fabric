@@ -20,19 +20,15 @@ control it.
 
 When all prerequisites are met, the end-2-end tests can be simply run like
 ```sh
-scripts/end2end.sh assetholder
+scripts/end2end.sh adjudicator
 ```
 where the first and only argument specifies the chaincode to deploy and test,
-currently only `assetholder`, and `adjudicator` follows soon.
-The network can then be shut down again by running
-```sh
-scripts/end2end.sh down
-```
+currently `assetholder` or `adjudicator`, or `down` to shut down the network.
 
-Currently, the end-2-end tests cannot run multiple times without restarting the
-network every time, because chaincode deployments to the same identifier cause
-trouble. This will change in the future. For this reason, shut down the network
-with `down` after running a test.
+End-2-end tests can run multiple times without restarting the network every
+time. This is realized by deploying the chaincode to a new random instance name
+every time. When you're done running end-2-end tests, shut down the network with
+argument `down`.
 
 ## Copyright
 
