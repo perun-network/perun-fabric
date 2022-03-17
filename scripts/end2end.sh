@@ -11,12 +11,6 @@ export NETWORK_CMD="${TEST_NETWORK_DIR}/network.sh"
 export CHAINCODE="$1"
 export CC_INSTANCE="${CHAINCODE}-$RANDOM"
 
-if [ -z "${CHAINCODE}" ]; then
-  echo "Usage: $0 <chaincode>|down"
-  echo "<chaincode> must be 'assetholder' or 'adjudicator'"
-  echo "down just shuts down the network"
-fi
-
 function ensureNetworkUp() {
   if [ -d "${TEST_NETWORK_DIR}/organizations/peerOrganizations" ]; then
     echo "Test network seems to be running."
@@ -46,7 +40,15 @@ function e2e() {
   runTest
 }
 
-[[ "$CHAINCODE" == "assetholder" || "$CHAINCODE" == "adjudicator" ]] && e2e
-
-[[ "$CHAINCODE" == "down" ]] && networkDown
+case "$CHAINCODE" in
+  assetholder | adjudicator)
+    e2e ;;
+  down)
+    networkDown ;;
+  *)
+    echo "Usage: $0 <chaincode>|down"
+    echo "<chaincode> must be 'assetholder' or 'adjudicator'"
+    echo "down just shuts down the network"
+    ;;
+esac
 
