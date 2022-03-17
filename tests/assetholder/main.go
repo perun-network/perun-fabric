@@ -6,10 +6,7 @@ import (
 	"flag"
 	"log"
 	"math/big"
-	"time"
 
-	"github.com/hyperledger/fabric-gateway/pkg/client"
-	"google.golang.org/grpc"
 	chtest "perun.network/go-perun/channel/test"
 	wtest "perun.network/go-perun/wallet/test"
 	"polycry.pt/poly-go/test"
@@ -29,7 +26,7 @@ func main() {
 	defer clientConn.Close()
 
 	// Create a Gateway connection for a specific client identity
-	gateway, err := newGateway(clientConn)
+	gateway, err := tests.NewGateway(clientConn)
 	tests.FatalErr("connecting to gateway", err)
 	defer gateway.Close()
 
@@ -56,28 +53,4 @@ func main() {
 	tests.FatalClientErr("querying holding", err)
 	log.Printf("Querying holding after withdrawal: %v", holding2)
 	tests.RequireEqual(new(big.Int), holding1, "Holding after withdrawal")
-}
-
-func newGateway(clientConn *grpc.ClientConn) (*client.Gateway, error) {
-	id, err := tests.NewIdentity()
-	if err != nil {
-		return nil, err
-	}
-	sign, err := tests.NewSign()
-	if err != nil {
-		return nil, err
-	}
-	tests.FatalErr("creating signer", err)
-
-	// Create a Gateway connection for a specific client identity
-	return client.Connect(
-		id,
-		client.WithSign(sign),
-		client.WithClientConnection(clientConn),
-		// Default timeouts for different gRPC calls
-		client.WithEvaluateTimeout(5*time.Second),
-		client.WithEndorseTimeout(15*time.Second),
-		client.WithSubmitTimeout(5*time.Second),
-		client.WithCommitStatusTimeout(1*time.Minute),
-	)
 }

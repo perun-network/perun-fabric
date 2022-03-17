@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	"github.com/hyperledger/fabric-gateway/pkg/identity"
@@ -115,6 +116,29 @@ func NewSign() (identity.Sign, error) {
 	}
 
 	return sign, nil
+}
+
+func NewGateway(clientConn *grpc.ClientConn) (*client.Gateway, error) {
+	id, err := NewIdentity()
+	if err != nil {
+		return nil, err
+	}
+	sign, err := NewSign()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a Gateway connection for a specific client identity
+	return client.Connect(
+		id,
+		client.WithSign(sign),
+		client.WithClientConnection(clientConn),
+		// Default timeouts for different gRPC calls
+		client.WithEvaluateTimeout(5*time.Second),
+		client.WithEndorseTimeout(15*time.Second),
+		client.WithSubmitTimeout(5*time.Second),
+		client.WithCommitStatusTimeout(1*time.Minute),
+	)
 }
 
 // FatalErr prints msg followed by err and then exits the program immedately, if

@@ -5,10 +5,7 @@ package main
 import (
 	"flag"
 	"log"
-	"time"
 
-	"github.com/hyperledger/fabric-gateway/pkg/client"
-	"google.golang.org/grpc"
 	"polycry.pt/poly-go/test"
 
 	_ "perun.network/go-perun/backend/ethereum" // init ethereum backend
@@ -27,7 +24,7 @@ func main() {
 	defer clientConn.Close()
 
 	// Create a Gateway connection for a specific client identity
-	gateway, err := newGateway(clientConn)
+	gateway, err := tests.NewGateway(clientConn)
 	tests.FatalErr("connecting to gateway", err)
 	defer gateway.Close()
 
@@ -57,28 +54,4 @@ func main() {
 	//tests.FatalClientErr("withdrawing", err)
 	//log.Printf("Withdrawing: %v", withdrawn)
 	//tests.RequireEqual(holding, withdrawn, "Withdraw")
-}
-
-func newGateway(clientConn *grpc.ClientConn) (*client.Gateway, error) {
-	id, err := tests.NewIdentity()
-	if err != nil {
-		return nil, err
-	}
-	sign, err := tests.NewSign()
-	if err != nil {
-		return nil, err
-	}
-	tests.FatalErr("creating signer", err)
-
-	// Create a Gateway connection for a specific client identity
-	return client.Connect(
-		id,
-		client.WithSign(sign),
-		client.WithClientConnection(clientConn),
-		// Default timeouts for different gRPC calls
-		client.WithEvaluateTimeout(5*time.Second),
-		client.WithEndorseTimeout(15*time.Second),
-		client.WithSubmitTimeout(5*time.Second),
-		client.WithCommitStatusTimeout(1*time.Minute),
-	)
 }
