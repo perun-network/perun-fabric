@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"math/rand"
 
+	"perun.network/go-perun/channel"
 	chtest "perun.network/go-perun/channel/test"
 	"perun.network/go-perun/wallet"
 	wtest "perun.network/go-perun/wallet/test"
@@ -91,5 +92,16 @@ func WithFinalState(s *Setup) {
 func WithVersion(v uint64) SetupOption {
 	return func(s *Setup) {
 		s.State.Version = v
+	}
+}
+
+func WithBalances(bals ...channel.Bal) SetupOption {
+	return func(s *Setup) {
+		if n := len(s.Params.Parts); len(bals) != n {
+			panic(fmt.Sprintf(
+				"Setup: balances mismatches number of participants (%d != %d)",
+				len(bals), n))
+		}
+		s.State.Balances = bals
 	}
 }
