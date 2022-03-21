@@ -128,13 +128,5 @@ var defaultCurve = elliptic.P256()
 // NewRandomAddress creates a new Address using the randomness
 // provided by rng. The default curve (P-256) is used.
 func NewRandomAddress(rng io.Reader) *Address {
-	sk, err := ecdsa.GenerateKey(defaultCurve, rng)
-	if err != nil {
-		panic("error generating ECDSA secret key: " + err.Error())
-	}
-	return &Address{
-		Curve: sk.Curve,
-		X:     sk.X,
-		Y:     sk.Y,
-	}
+	return NewRandomAccount(rng).ECDSAAddress()
 }
