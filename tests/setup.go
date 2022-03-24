@@ -4,7 +4,6 @@ package tests
 
 import (
 	"context"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -18,8 +17,10 @@ import (
 	"github.com/hyperledger/fabric-gateway/pkg/identity"
 	gwproto "github.com/hyperledger/fabric-protos-go/gateway"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
+
+	pclient "github.com/perun-network/perun-fabric/client"
+	"github.com/perun-network/perun-fabric/wallet"
 )
 
 const (
@@ -53,83 +54,40 @@ func tlsCertPath() string { return cryptoPath() + "/peers/peer0.org1.example.com
 
 // NewGrpcConnection creates a gRPC connection to the Gateway server.
 func NewGrpcConnection() (*grpc.ClientConn, error) {
-	certificate, err := loadCertificate(tlsCertPath())
-	if err != nil {
-		return nil, fmt.Errorf("loading certificate: %w", err)
-	}
-
-	certPool := x509.NewCertPool()
-	certPool.AddCert(certificate)
-	transportCredentials := credentials.NewClientTLSFromCert(certPool, gatewayPeer)
-
-	connection, err := grpc.Dial(peerEndpoint, grpc.WithTransportCredentials(transportCredentials))
-	if err != nil {
-		return nil, fmt.Errorf("creating gRPC connection: %w", err)
-	}
-
-	return connection, nil
+	return pclient.NewGrpcConnection(gatewayPeer, peerEndpoint, tlsCertPath())
 }
 
 // NewIdentity creates a client identity for this Gateway connection using an X.509 certificate.
-func NewIdentity() (*identity.X509Identity, error) {
-	certificate, err := loadCertificate(certPath())
-	if err != nil {
-		return nil, fmt.Errorf("loading certificate: %w", err)
-	}
-
-	id, err := identity.NewX509Identity(mspID, certificate)
-	if err != nil {
-		return nil, fmt.Errorf("creating X509Identity: %w", err)
-	}
-
-	return id, nil
-}
-
-func loadCertificate(filename string) (*x509.Certificate, error) {
-	certificatePEM, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("reading file: %w", err)
-	}
-	return identity.CertificateFromPEM(certificatePEM)
+func NewIdentity() (*identity.X509Identity, *wallet.Address, error) {
+	return pclient.NewIdentity(mspID, certPath())
 }
 
 // NewSign creates a function that generates a digital signature from a message digest using a private key.
-func NewSign() (identity.Sign, error) {
+func NewAccountWithSigner() (identity.Sign, *wallet.Account, error) {
 	files, err := ioutil.ReadDir(keyPath())
 	if err != nil {
-		return nil, fmt.Errorf("reading private key directory: %w", err)
+		return nil, nil, fmt.Errorf("reading private key directory: %w", err)
 	}
-
-	privateKeyPEM, err := ioutil.ReadFile(path.Join(keyPath(), files[0].Name()))
-	if err != nil {
-		return nil, fmt.Errorf("reading private key file: %w", err)
-	}
-
-	privateKey, err := identity.PrivateKeyFromPEM(privateKeyPEM)
-	if err != nil {
-		return nil, fmt.Errorf("parsing private key PEM: %w", err)
-	}
-
-	sign, err := identity.NewPrivateKeySign(privateKey)
-	if err != nil {
-		return nil, fmt.Errorf("creating signer: %w", err)
-	}
-
-	return sign, nil
+	path := path.Join(keyPath(), files[0].Name())
+	return pclient.NewAccountWithSigner(path)
 }
 
-func NewGateway(clientConn *grpc.ClientConn) (*client.Gateway, error) {
-	id, err := NewIdentity()
+func NewGateway(clientConn *grpc.ClientConn) (*client.Gateway, *wallet.Account, error) {
+	id, addr, err := NewIdentity()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	sign, err := NewSign()
+	sign, acc, err := NewAccountWithSigner()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	if acca := acc.Address(); !acca.Equal(addr) {
+		return nil, nil, fmt.Errorf("identity and signer public key mismatch, %v != %v", acca, addr)
 	}
 
 	// Create a Gateway connection for a specific client identity
-	return client.Connect(
+	gw, err := client.Connect(
 		id,
 		client.WithSign(sign),
 		client.WithClientConnection(clientConn),
@@ -139,6 +97,7 @@ func NewGateway(clientConn *grpc.ClientConn) (*client.Gateway, error) {
 		client.WithSubmitTimeout(5*time.Second),
 		client.WithCommitStatusTimeout(1*time.Minute),
 	)
+	return gw, acc, err
 }
 
 // FatalErr prints msg followed by err and then exits the program immedately, if
