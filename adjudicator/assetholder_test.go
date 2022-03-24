@@ -8,13 +8,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	_ "perun.network/go-perun/backend/ethereum" // backend init
 	"perun.network/go-perun/channel"
 	chtest "perun.network/go-perun/channel/test"
 	"perun.network/go-perun/wallet"
 	wtest "perun.network/go-perun/wallet/test"
 	"polycry.pt/poly-go/test"
 
+	_ "github.com/perun-network/perun-fabric" // init backend
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 )
 
