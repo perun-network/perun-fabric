@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	chtest "perun.network/go-perun/channel/test"
+	"perun.network/go-perun/wallet"
 	wtest "perun.network/go-perun/wallet/test"
 	"polycry.pt/poly-go/test"
 
@@ -42,6 +43,11 @@ func main() {
 	tests.FatalClientErr("querying holding", err)
 	log.Printf("Querying holding: %v", holding1)
 	tests.RequireEqual(holding, holding1, "Holding")
+
+	total, err := ah.TotalHolding(id, []wallet.Address{addr})
+	tests.FatalClientErr("querying total holding", err)
+	log.Printf("Querying total holding: %v", total)
+	tests.RequireEqual(holding, total, "Holding")
 
 	withdrawn, err := ah.Withdraw(id, addr)
 	tests.FatalClientErr("withdrawing", err)

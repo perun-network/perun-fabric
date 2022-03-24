@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	txDeposit  = "Deposit"
-	txHolding  = "Holding"
-	txWithdraw = "Withdraw"
+	txDeposit      = "Deposit"
+	txHolding      = "Holding"
+	txTotalHolding = "TotalHolding"
+	txWithdraw     = "Withdraw"
 )
 
 type AssetHolder struct {
@@ -42,6 +43,14 @@ func (ah *AssetHolder) Holding(id channel.ID, addr wallet.Address) (*big.Int, er
 		return nil, err
 	}
 	return tests.BigIntWithError(ah.Contract.SubmitTransaction(txHolding, args...))
+}
+
+func (ah *AssetHolder) TotalHolding(id channel.ID, addrs []wallet.Address) (*big.Int, error) {
+	args, err := pkgjson.MultiMarshal(id, addrs)
+	if err != nil {
+		return nil, err
+	}
+	return tests.BigIntWithError(ah.Contract.SubmitTransaction(txTotalHolding, args...))
 }
 
 func (ah *AssetHolder) Withdraw(id channel.ID, addr wallet.Address) (*big.Int, error) {
