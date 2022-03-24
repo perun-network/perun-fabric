@@ -22,23 +22,34 @@ func (Adjudicator) contract(ctx contractapi.TransactionContextInterface) *adj.Ad
 }
 
 func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
-	id channel.ID, part Address, amountStr string) error {
+	id channel.ID, partStr string, amountStr string) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
-	return a.contract(ctx).Deposit(id, &part, amount)
+	part, err := UnmarshalAddress(partStr)
+	if err != nil {
+		return err
+	}
+	return a.contract(ctx).Deposit(id, part, amount)
 }
 
 func (a *Adjudicator) Holding(ctx contractapi.TransactionContextInterface,
-	id channel.ID, part Address) (string, error) {
-	return stringWithErr(a.contract(ctx).Holding(id, &part))
+	id channel.ID, partStr string) (string, error) {
+	part, err := UnmarshalAddress(partStr)
+	if err != nil {
+		return "", err
+	}
+	return stringWithErr(a.contract(ctx).Holding(id, part))
 }
 
 func (a *Adjudicator) TotalHolding(ctx contractapi.TransactionContextInterface,
-	id channel.ID, parts []Address) (string, error) {
-	wparts := AsWalletAddresses(parts)
-	return stringWithErr(a.contract(ctx).TotalHolding(id, wparts))
+	id channel.ID, partsStr string) (string, error) {
+	parts, err := UnmarshalAddresses(partsStr)
+	if err != nil {
+		return "", err
+	}
+	return stringWithErr(a.contract(ctx).TotalHolding(id, parts))
 }
 
 func (a *Adjudicator) Register(ctx contractapi.TransactionContextInterface,
@@ -61,6 +72,10 @@ func (a *Adjudicator) StateReg(ctx contractapi.TransactionContextInterface,
 }
 
 func (a *Adjudicator) Withdraw(ctx contractapi.TransactionContextInterface,
-	id channel.ID, part Address) (string, error) {
-	return stringWithErr(a.contract(ctx).Withdraw(id, &part))
+	id channel.ID, partStr string) (string, error) {
+	part, err := UnmarshalAddress(partStr)
+	if err != nil {
+		return "", err
+	}
+	return stringWithErr(a.contract(ctx).Withdraw(id, part))
 }
