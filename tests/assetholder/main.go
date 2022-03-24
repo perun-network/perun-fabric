@@ -9,7 +9,6 @@ import (
 
 	chtest "perun.network/go-perun/channel/test"
 	"perun.network/go-perun/wallet"
-	wtest "perun.network/go-perun/wallet/test"
 	"polycry.pt/poly-go/test"
 
 	_ "github.com/perun-network/perun-fabric" // init backend
@@ -26,7 +25,7 @@ func main() {
 	defer clientConn.Close()
 
 	// Create a Gateway connection for a specific client identity
-	gateway, err := tests.NewGateway(clientConn)
+	gateway, acc, err := tests.NewGateway(clientConn)
 	tests.FatalErr("connecting to gateway", err)
 	defer gateway.Close()
 
@@ -34,10 +33,10 @@ func main() {
 	ah := NewAssetHolder(network)
 
 	rng := test.Prng(test.NameStr("FabricAssetHolder"))
-	id, addr := chtest.NewRandomChannelID(rng), wtest.NewRandomAddress(rng)
+	id, addr := chtest.NewRandomChannelID(rng), acc.Address()
 	holding := big.NewInt(rng.Int63())
 	log.Printf("Depositing: funding id: (%x, %v), amount: %v", id, addr, holding)
-	tests.FatalClientErr("sending Deposit tx", ah.Deposit(id, addr, holding))
+	tests.FatalClientErr("sending Deposit tx", ah.Deposit(id, holding))
 
 	holding1, err := ah.Holding(id, addr)
 	tests.FatalClientErr("querying holding", err)
@@ -49,7 +48,7 @@ func main() {
 	log.Printf("Querying total holding: %v", total)
 	tests.RequireEqual(holding, total, "Holding")
 
-	withdrawn, err := ah.Withdraw(id, addr)
+	withdrawn, err := ah.Withdraw(id)
 	tests.FatalClientErr("withdrawing", err)
 	log.Printf("Withdrawing: %v", withdrawn)
 	tests.RequireEqual(holding, withdrawn, "Withdraw")
