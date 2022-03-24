@@ -5,6 +5,7 @@ package wallet
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/x509"
 	"encoding/asn1"
 	"encoding/hex"
 	"encoding/json"
@@ -127,4 +128,12 @@ func asECDSA(a wallet.Address) *ecdsa.PublicKey {
 // provided by rng. The default curve (P-256) is used.
 func NewRandomAddress(rng io.Reader) *Address {
 	return NewRandomAccount(rng).FabricAddress()
+}
+
+func AddressFromX509Certificate(cert *x509.Certificate) (*Address, error) {
+	pk, ok := cert.PublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("certificate public key of unexpected type %T", cert.PublicKey)
+	}
+	return (*Address)(pk), nil
 }
