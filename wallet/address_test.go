@@ -7,11 +7,11 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	wiretest "perun.network/go-perun/wire/test"
 	"polycry.pt/poly-go/test"
 
 	"github.com/perun-network/perun-fabric/wallet"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAddressJSONMarshaling(t *testing.T) {
