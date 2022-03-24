@@ -28,8 +28,8 @@ func NewAssetHolder(network *client.Network) *AssetHolder {
 	return &AssetHolder{Contract: network.GetContract(*chainCode)}
 }
 
-func (ah *AssetHolder) Deposit(id channel.ID, addr wallet.Address, amount *big.Int) error {
-	args, err := pkgjson.MultiMarshal(id, addr, amount)
+func (ah *AssetHolder) Deposit(id channel.ID, amount *big.Int) error {
+	args, err := pkgjson.MultiMarshal(id, amount)
 	if err != nil {
 		return err
 	}
@@ -53,8 +53,8 @@ func (ah *AssetHolder) TotalHolding(id channel.ID, addrs []wallet.Address) (*big
 	return tests.BigIntWithError(ah.Contract.SubmitTransaction(txTotalHolding, args...))
 }
 
-func (ah *AssetHolder) Withdraw(id channel.ID, addr wallet.Address) (*big.Int, error) {
-	args, err := pkgjson.MultiMarshal(id, addr)
+func (ah *AssetHolder) Withdraw(id channel.ID) (*big.Int, error) {
+	args, err := pkgjson.MultiMarshal(id)
 	if err != nil {
 		return nil, err
 	}

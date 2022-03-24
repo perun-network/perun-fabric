@@ -8,7 +8,9 @@ import (
 
 	"perun.network/go-perun/wallet"
 
+	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 	_ "github.com/perun-network/perun-fabric" // init backend
+	fabwallet "github.com/perun-network/perun-fabric/wallet"
 )
 
 func stringWithErr(s fmt.Stringer, err error) (string, error) {
@@ -41,4 +43,12 @@ func UnmarshalAddresses(addrsStr string) ([]wallet.Address, error) {
 		addrs = append(addrs, addr)
 	}
 	return addrs, nil
+}
+
+func AddressFromTxCtx(ctx contractapi.TransactionContextInterface) (*fabwallet.Address, error) {
+	cert, err := ctx.GetClientIdentity().GetX509Certificate()
+	if err != nil {
+		return nil, fmt.Errorf("getting identity: %w", err)
+	}
+	return fabwallet.AddressFromX509Certificate(cert)
 }
