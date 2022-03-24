@@ -123,10 +123,8 @@ func asECDSA(a wallet.Address) *ecdsa.PublicKey {
 	return ((a).(*Address)).ECDSA()
 }
 
-var defaultCurve = elliptic.P256()
-
 // NewRandomAddress creates a new Address using the randomness
 // provided by rng. The default curve (P-256) is used.
 func NewRandomAddress(rng io.Reader) *Address {
-	return NewRandomAccount(rng).ECDSAAddress()
+	return NewRandomAccount(rng).FabricAddress()
 }

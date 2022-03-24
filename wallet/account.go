@@ -11,6 +11,8 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
+var defaultCurve = elliptic.P256()
+
 type Account ecdsa.PrivateKey
 
 func (a *Account) ECDSA() *ecdsa.PrivateKey { return (*ecdsa.PrivateKey)(a) }
@@ -25,14 +27,14 @@ func NewRandomAccount(rng io.Reader) *Account {
 	return (*Account)(sk)
 }
 
-// Address belonging to this Account.
+// Address of this Account.
 func (a *Account) Address() wallet.Address {
-	return a.ECDSAAddress()
+	return a.FabricAddress()
 }
 
-// ECDSAAddress returns the public key of this account as this package's Address
-// type.
-func (a *Account) ECDSAAddress() *Address {
+// FabricAddress returns the public key of this account as this package's
+// Address type.
+func (a *Account) FabricAddress() *Address {
 	return (*Address)(&a.PublicKey)
 }
 
