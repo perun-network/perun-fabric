@@ -7,10 +7,10 @@ import (
 	"log"
 	"math/big"
 
-	_ "perun.network/go-perun/backend/ethereum" // init ethereum backend
 	"perun.network/go-perun/channel"
 	"polycry.pt/poly-go/test"
 
+	_ "github.com/perun-network/perun-fabric" // init backend
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 	"github.com/perun-network/perun-fabric/tests"
 )
