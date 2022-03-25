@@ -3,21 +3,16 @@
 package tests
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	"github.com/hyperledger/fabric-gateway/pkg/identity"
-	gwproto "github.com/hyperledger/fabric-protos-go/gateway"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/status"
 
 	pclient "github.com/perun-network/perun-fabric/client"
 	"github.com/perun-network/perun-fabric/wallet"
@@ -156,36 +151,6 @@ func FatalErr(msg string, err error) {
 // The program is then exited immedately.
 func FatalClientErr(msg string, err error) {
 	if err != nil {
-		log.Fatalf("Error %s: [%T] %+v\n%s", msg, err, err, ParseClientErr(err))
+		log.Fatalf("Error %s: [%T] %+v\n%s", msg, err, err, pclient.ParseClientErr(err))
 	}
-}
-
-// ParseClientErr parses the full details of err as a fabric client error.
-func ParseClientErr(err error) string {
-	var s strings.Builder
-
-	switch err := err.(type) {
-	case *client.EndorseError:
-		s.WriteString(fmt.Sprintf("Endorse error with gRPC status %v: %s\n", status.Code(err), err))
-	case *client.SubmitError:
-		s.WriteString(fmt.Sprintf("Submit error with gRPC status %v: %s\n", status.Code(err), err))
-	case *client.CommitStatusError:
-		if errors.Is(err, context.DeadlineExceeded) {
-			s.WriteString(fmt.Sprintf("Timeout waiting for transaction %s commit status: %s\n", err.TransactionID, err))
-		} else {
-			s.WriteString(fmt.Sprintf("Error obtaining commit status with gRPC status %v: %s\n", status.Code(err), err))
-		}
-	case *client.CommitError:
-		s.WriteString(fmt.Sprintf("Transaction %s failed to commit with status %d: %s\n", err.TransactionID, int32(err.Code), err))
-	}
-
-	//Any error that originates from a peer or orderer node external to the gateway will have its details
-	//embedded within the gRPC status error. The following code shows how to extract that.
-	statusErr := status.Convert(err)
-	for _, detail := range statusErr.Details() {
-		errDetail := detail.(*gwproto.ErrorDetail)
-		s.WriteString(fmt.Sprintf("Error from endpoint: %s, mspId: %s, message: %s\n", errDetail.Address, errDetail.MspId, errDetail.Message))
-	}
-
-	return s.String()
 }
