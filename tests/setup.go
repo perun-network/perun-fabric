@@ -25,12 +25,33 @@ import (
 
 const (
 	fabricSamplesEnv = "FABRIC_SAMPLES_DIR"
-
-	mspID        = "Org1MSP"
-	peerEndpoint = "localhost:7051"
-	gatewayPeer  = "peer0.org1.example.com"
-	ChannelName  = "mychannel"
+	ChannelName      = "mychannel"
 )
+
+type Org string
+
+const (
+	Org1 Org = "org1"
+	Org2 Org = "org2"
+)
+
+func OrgNum(n uint) Org {
+	switch n {
+	case 1, 2:
+		return Org(fmt.Sprintf("org%d", n))
+	}
+	panic(fmt.Sprintf("invalid org number %d", n))
+}
+
+func (org Org) Port() string {
+	switch org {
+	case Org1:
+		return "7051"
+	case org:
+		return "9051"
+	}
+	panic("invalid org: " + org)
+}
 
 // fabricSamplesPath should point to the checked-out fabric-samples repository
 // found at https://github.com/hyperledger/fabric-samples
@@ -45,39 +66,61 @@ func init() {
 	}
 }
 
-func cryptoPath() string {
-	return path.Join(fabricSamplesPath, "test-network/organizations/peerOrganizations/org1.example.com")
+func mspID(org Org) string        { return "O" + string(org[1:]) + "MSP" }
+func peerEndpoint(org Org) string { return "localhost:" + org.Port() }
+func gatewayPeer(org Org) string  { return "peer0." + string(org) + ".example.com" }
+
+func cryptoPath(org Org) string {
+	return path.Join(fabricSamplesPath, "test-network/organizations/peerOrganizations/"+string(org)+".example.com")
 }
-func certPath() string    { return cryptoPath() + "/users/User1@org1.example.com/msp/signcerts/cert.pem" }
-func keyPath() string     { return cryptoPath() + "/users/User1@org1.example.com/msp/keystore/" }
-func tlsCertPath() string { return cryptoPath() + "/peers/peer0.org1.example.com/tls/ca.crt" }
+
+func certPath(org Org) string {
+	return cryptoPath(org) + "/users/User1@" + string(org) + ".example.com/msp/signcerts/cert.pem"
+}
+
+func keyDir(org Org) string {
+	return cryptoPath(org) + "/users/User1@" + string(org) + ".example.com/msp/keystore/"
+}
+
+func keyPath(org Org) (string, error) {
+	kp := keyDir(org)
+	files, err := ioutil.ReadDir(kp)
+	if err != nil {
+		return "", fmt.Errorf("reading private key directory: %w", err)
+	}
+	// the first and only file in the keystore is the secret key
+	return path.Join(kp, files[0].Name()), nil
+}
+
+func tlsCertPath(org Org) string {
+	return cryptoPath(org) + "/peers/peer0." + string(org) + ".example.com/tls/ca.crt"
+}
 
 // NewGrpcConnection creates a gRPC connection to the Gateway server.
-func NewGrpcConnection() (*grpc.ClientConn, error) {
-	return pclient.NewGrpcConnection(gatewayPeer, peerEndpoint, tlsCertPath())
+func NewGrpcConnection(org Org) (*grpc.ClientConn, error) {
+	return pclient.NewGrpcConnection(gatewayPeer(org), peerEndpoint(org), tlsCertPath(org))
 }
 
 // NewIdentity creates a client identity for this Gateway connection using an X.509 certificate.
-func NewIdentity() (*identity.X509Identity, *wallet.Address, error) {
-	return pclient.NewIdentity(mspID, certPath())
+func NewIdentity(org Org) (*identity.X509Identity, *wallet.Address, error) {
+	return pclient.NewIdentity(mspID(org), certPath(org))
 }
 
 // NewSign creates a function that generates a digital signature from a message digest using a private key.
-func NewAccountWithSigner() (identity.Sign, *wallet.Account, error) {
-	files, err := ioutil.ReadDir(keyPath())
-	if err != nil {
-		return nil, nil, fmt.Errorf("reading private key directory: %w", err)
-	}
-	path := path.Join(keyPath(), files[0].Name())
-	return pclient.NewAccountWithSigner(path)
-}
-
-func NewGateway(clientConn *grpc.ClientConn) (*client.Gateway, *wallet.Account, error) {
-	id, addr, err := NewIdentity()
+func NewAccountWithSigner(org Org) (identity.Sign, *wallet.Account, error) {
+	path, err := keyPath(org)
 	if err != nil {
 		return nil, nil, err
 	}
-	sign, acc, err := NewAccountWithSigner()
+	return pclient.NewAccountWithSigner(path)
+}
+
+func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.Account, error) {
+	id, addr, err := NewIdentity(org)
+	if err != nil {
+		return nil, nil, err
+	}
+	sign, acc, err := NewAccountWithSigner(org)
 	if err != nil {
 		return nil, nil, err
 	}

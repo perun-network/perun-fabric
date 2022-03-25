@@ -16,16 +16,18 @@ import (
 )
 
 var chainCode = flag.String("chaincode", "assetholder", "AssetHolder chaincode name")
+var org = flag.Uint("org", 1, "Organization# of user to perfrom txs as (1 or 2)")
 
 func main() {
 	flag.Parse()
 
-	clientConn, err := tests.NewGrpcConnection()
+	org := tests.OrgNum(*org)
+	clientConn, err := tests.NewGrpcConnection(org)
 	tests.FatalErr("creating client conn", err)
 	defer clientConn.Close()
 
 	// Create a Gateway connection for a specific client identity
-	gateway, acc, err := tests.NewGateway(clientConn)
+	gateway, acc, err := tests.NewGateway(org, clientConn)
 	tests.FatalErr("connecting to gateway", err)
 	defer gateway.Close()
 
