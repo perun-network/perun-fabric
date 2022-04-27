@@ -2,8 +2,8 @@ package channel
 
 import (
 	"context"
-	"github.com/hyperledger/fabric-gateway/pkg/client"
-	asset "github.com/perun-network/perun-fabric/tests/assetholder" // TODO: Is "program" not an importable package
+	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+	assset "github.com/perun-network/perun-fabric/chaincode"
 	"log"
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
@@ -13,14 +13,16 @@ import (
 const defaultPollingInterval = 1 * time.Second // TODO: Consider a better place for the constant
 
 type Funder struct {
-	contract *asset.AssetHolder
+	contract *assset.AssetHolder
+	tctx     *contractapi.TransactionContext
 	polling  time.Duration
 }
 
 // NewFunder returns a new Funder.
-func NewFunder(n *client.Network) *Funder { // TODO: Make polling interval adjustable
+func NewFunder(c contractapi.Contract, tctx *contractapi.TransactionContext) *Funder { // TODO: Make polling interval adjustable
 	return &Funder{
-		contract: asset.NewAssetHolder(n), // network is already a gateway connection of a specific acc. Maybe gen gateway here... ?
+		contract: assset.NewAssetHolder(c), // Network is already a gateway connection of a specific acc. Maybe gen gateway here... ?
+		tctx:     tctx,                     // Created when a smart contract is deployed to a channel and made available to every subsequent transaction invocation.
 		polling:  defaultPollingInterval,
 	}
 }
@@ -29,10 +31,15 @@ func NewFunder(n *client.Network) *Funder { // TODO: Make polling interval adjus
 func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 	// Get Funding args.
 	id := req.Params.ID()
-	funding := req.Agreement[0][req.Idx] // TODO: Figure out how to get right balance (of callee)
+
+	if len(req.Agreement) != 1 {
+		panic("Funder: Funding request includes less ore more than one asset.")
+	}
+	assetIndex := 0
+	funding := req.Agreement[assetIndex][req.Idx]
 
 	// Make deposit.
-	err := f.contract.Deposit(id, funding)
+	err := f.contract.Deposit(f.tctx, id, funding.String()) // TODO: Check why Deposit required the funding in string format
 	if err != nil {
 		return err
 	}
@@ -45,13 +52,15 @@ func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
 func (f *Funder) awaitFundingComplete(ctx context.Context, req pchannel.FundingReq) error {
 	total := req.State.Allocation.Sum()[0] // [0] because we are only supporting one asset.
 	for {
-		funded := big.NewInt(0) // TODO: We need an Asset here. Temporarily using big int's.
+		funded := big.NewInt(0) // TODO: We need to use a asset type here.
 		for i := range req.Params.Parts {
-			_funded, err := f.contract.Holding(req.Params.ID(), req.Params.Parts[i]) // TODO: We could use "TotalHolding" here to replace the loop
+			fundedStr, err := f.contract.Holding(f.tctx, req.Params.ID(), req.Params.Parts[i].String()) // TODO: We could use "TotalHolding" here to replace the loop
 			if err != nil {
 				log.Printf("Warning: Error querying deposit: %v\n", err)
 			}
-			funded = big.NewInt(0).Add(funded, _funded)
+
+			_funded, _ := big.NewInt(0).SetString(fundedStr, 10) // TODO: Check if we can mitigate this conversion
+			funded = funded.Add(funded, _funded)
 		}
 
 		if funded.Cmp(total) == 0 {
