@@ -17,12 +17,24 @@ type Funder struct {
 	polling  time.Duration
 }
 
+type FunderOpt func(*Funder)
+
+func FunderPollingIntervalOpt(d time.Duration) FunderOpt {
+	return func(f *Funder) {
+		f.polling = d
+	}
+}
+
 // NewFunder returns a new Funder.
-func NewFunder(c contractapi.Contract) *Funder { // TODO: Make polling interval adjustable
-	return &Funder{
+func NewFunder(c contractapi.Contract, opts ...FunderOpt) *Funder {
+	f := &Funder{
 		contract: asset.NewAssetHolder(c),
 		polling:  defaultPollingInterval,
 	}
+	for _, opt := range opts {
+		opt(f)
+	}
+	return f
 }
 
 // Fund deposits funds according to the specified funding request and waits until the funding is complete.
