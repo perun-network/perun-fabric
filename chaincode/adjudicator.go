@@ -17,6 +17,10 @@ type Adjudicator struct {
 	contractapi.Contract
 }
 
+func NewAdjudicator(contract contractapi.Contract) *Adjudicator {
+	return &Adjudicator{contract}
+}
+
 func (Adjudicator) contract(ctx contractapi.TransactionContextInterface) *adj.Adjudicator {
 	return adj.NewAdjudicator(NewStubLedger(ctx))
 }
