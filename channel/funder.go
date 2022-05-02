@@ -2,19 +2,29 @@ package channel
 
 import (
 	"context"
-	"github.com/hyperledger/fabric-contract-api-go/contractapi"
-	asset "github.com/perun-network/perun-fabric/chaincode"
+	"flag"
+	"github.com/hyperledger/fabric-gateway/pkg/client"
+	"github.com/perun-network/perun-fabric/pkg/json"
+	"github.com/perun-network/perun-fabric/tests"
 	"log"
 	"math/big"
-	pchannel "perun.network/go-perun/channel"
+	"perun.network/go-perun/channel"
+	"perun.network/go-perun/wallet"
 	"time"
 )
 
-const defaultPollingInterval = 1 * time.Second // TODO: Consider a better place for the constant
+// TODO: Consider a better place for these constants.
+const (
+	txDeposit              = "Deposit"
+	txHolding              = "Holding"
+	txTotalHolding         = "TotalHolding"
+	txWithdraw             = "Withdraw"
+	defaultPollingInterval = 1 * time.Second
+)
 
 type Funder struct {
-	contract *asset.AssetHolder
-	polling  time.Duration
+	ah      *client.Contract // The AssetHolder contract.
+	polling time.Duration    // The polling interval.
 }
 
 type FunderOpt func(*Funder)
@@ -26,10 +36,12 @@ func FunderPollingIntervalOpt(d time.Duration) FunderOpt {
 }
 
 // NewFunder returns a new Funder.
-func NewFunder(c contractapi.Contract, opts ...FunderOpt) *Funder {
+func NewFunder(network *client.Network, opts ...FunderOpt) *Funder {
+	chainCode := flag.String("chaincode", "assetholder", "AssetHolder chaincode name") // TODO: How do we handle this? Maybe as constructor argument?
+
 	f := &Funder{
-		contract: asset.NewAssetHolder(c),
-		polling:  defaultPollingInterval,
+		ah:      network.GetContract(*chainCode),
+		polling: defaultPollingInterval,
 	}
 	for _, opt := range opts {
 		opt(f)
@@ -38,47 +50,36 @@ func NewFunder(c contractapi.Contract, opts ...FunderOpt) *Funder {
 }
 
 // Fund deposits funds according to the specified funding request and waits until the funding is complete.
-func (f *Funder) Fund(ctx context.Context, req pchannel.FundingReq) error {
+func (f *Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 	// Get Funding args.
 	id := req.Params.ID()
 
 	if len(req.Agreement) != 1 {
-		panic("Funder: Funding request includes less ore more than one asset.")
+		panic("Funder: Funding request holds != 1 asset.")
 	}
 	assetIndex := 0
 	funding := req.Agreement[assetIndex][req.Idx]
 
-	// Get transaction context.
-	// Created when a smart contract is deployed to a channel and made available to every subsequent transaction invocation.
-	_tctx := f.contract.GetTransactionContextHandler()
-	tctx, _ := _tctx.(*contractapi.TransactionContext)
-
 	// Make deposit.
-	err := f.contract.Deposit(tctx, id, funding.String()) // TODO: Check why Deposit required the funding in string format
+	err := f.deposit(id, funding)
 	if err != nil {
 		return err
 	}
 
 	// Wait for Funding completion.
-	return f.awaitFundingComplete(ctx, tctx, req)
+	return f.awaitFundingComplete(ctx, req)
 }
 
 // awaitFundingComplete blocks until the funding of the specified channel is complete.
-func (f *Funder) awaitFundingComplete(ctx context.Context, tctx *contractapi.TransactionContext, req pchannel.FundingReq) error {
+func (f *Funder) awaitFundingComplete(ctx context.Context, req channel.FundingReq) error {
 	total := req.State.Allocation.Sum()[0] // [0] because we are only supporting one asset.
 	for {
-		funded := big.NewInt(0) // TODO: We need to use a asset type here.
-		for i := range req.Params.Parts {
-			fundedStr, err := f.contract.Holding(tctx, req.Params.ID(), req.Params.Parts[i].String()) // TODO: We could use "TotalHolding" here to replace the loop
-			if err != nil {
-				log.Printf("Warning: Error querying deposit: %v\n", err)
-			}
-
-			_funded, _ := big.NewInt(0).SetString(fundedStr, 10) // TODO: Check if we can mitigate this conversion
-			funded = funded.Add(funded, _funded)
+		funded, err := f.totalHolding(req.Params.ID(), req.Params.Parts)
+		if err != nil {
+			log.Printf("Warning: Error querying deposit: %v\n", err)
 		}
 
-		if funded.Cmp(total) == 0 {
+		if funded.Cmp(total) >= 0 {
 			return nil
 		}
 
@@ -89,4 +90,37 @@ func (f *Funder) awaitFundingComplete(ctx context.Context, tctx *contractapi.Tra
 		}
 	}
 
+}
+
+func (f *Funder) deposit(id channel.ID, amount *big.Int) error {
+	args, err := json.MultiMarshal(id, amount)
+	if err != nil {
+		return err
+	}
+	_, err = f.ah.SubmitTransaction(txDeposit, args...)
+	return err
+}
+
+func (f *Funder) holding(id channel.ID, addr wallet.Address) (*big.Int, error) { // TODO: Remove?
+	args, err := json.MultiMarshal(id, addr)
+	if err != nil {
+		return nil, err
+	}
+	return tests.BigIntWithError(f.ah.SubmitTransaction(txHolding, args...))
+}
+
+func (f *Funder) totalHolding(id channel.ID, addrs []wallet.Address) (*big.Int, error) {
+	args, err := json.MultiMarshal(id, addrs)
+	if err != nil {
+		return nil, err
+	}
+	return tests.BigIntWithError(f.ah.SubmitTransaction(txTotalHolding, args...))
+}
+
+func (f *Funder) withdraw(id channel.ID) (*big.Int, error) { // TODO: Remove?
+	args, err := json.MultiMarshal(id)
+	if err != nil {
+		return nil, err
+	}
+	return tests.BigIntWithError(f.ah.SubmitTransaction(txWithdraw, args...))
 }
