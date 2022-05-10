@@ -138,6 +138,11 @@ func (s *StateReg) Clone() *StateReg {
 	}
 }
 
+func (s *StateReg) Equal(_s StateReg) bool {
+	err := s.CoreState().Equal(_s.CoreState())
+	return err == nil
+}
+
 func (s *StateReg) UnmarshalJSON(data []byte) error {
 	sj := struct {
 		State   *State          `json:"state"`
@@ -189,4 +194,30 @@ func (ch *SignedChannel) Clone() *SignedChannel {
 		State:  ch.State.Clone(),
 		Sigs:   wallet.CloneSigs(ch.Sigs),
 	}
+}
+
+func ConvertToSignedChannel(req channel.AdjudicatorReq) (*SignedChannel, error) {
+	p := req.Params.Clone()
+	params := Params{
+		ChallengeDuration: p.ChallengeDuration,
+		Parts:             p.Parts,
+		Nonce:             p.Nonce,
+	}
+
+	s := req.Tx.State.Clone()
+	if len(s.Balances) != 1 {
+		return nil, fmt.Errorf("Only single assets supported.")
+	}
+	state := State{
+		ID:       s.ID,
+		Version:  s.Version,
+		Balances: s.Balances[0], // We only support a single asset
+		IsFinal:  s.IsFinal,
+	}
+
+	return &SignedChannel{
+		Params: params,
+		State:  state,
+		Sigs:   req.Tx.Sigs,
+	}, nil
 }

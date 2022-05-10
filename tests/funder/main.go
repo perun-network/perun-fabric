@@ -37,14 +37,13 @@ func main() {
 	funder := channel.NewFunder(network, *chainCode)
 
 	rng := test.Prng(test.NameStr("FabricFunder"))
-	id, addr := chtest.NewRandomChannelID(rng), acc.Address()
+	addr := acc.Address()
 
 	// Create random test parameters
 	params, state := chtest.NewRandomParamsAndState(
 		rng,
 		chtest.WithNumAssets(1),
 		chtest.WithNumParts(2),
-		chtest.WithID(id),
 		chtest.WithParts(addr),
 	)
 
@@ -52,12 +51,12 @@ func main() {
 	req := &pchannel.FundingReq{
 		Params:    params,
 		State:     state,
-		Idx:       1,
+		Idx:       0,
 		Agreement: state.Balances,
 	}
 
 	alloc := req.State.Allocation.Sum()[0]
-	log.Printf("Request created: (funding id: %v, part: %v, allocation: %v)", id, addr, alloc)
+	log.Printf("Request created: (part: %v, allocation: %v)", addr, alloc)
 
 	log.Printf("Funding...")
 	tests.FatalErr("funding", funder.Fund(ctx, *req))
