@@ -5,7 +5,7 @@
 set -e
 
 export ORIGIN="$(pwd)"
-export FABRIC_SAMPLES_DIR="${FABRIC_SAMPLES_DIR:-fabric-samples}"
+export FABRIC_SAMPLES_DIR="${FABRIC_SAMPLES_DIR:-../fabric-samples}"
 export TEST_NETWORK_DIR="${FABRIC_SAMPLES_DIR}/test-network"
 export NETWORK_CMD="${TEST_NETWORK_DIR}/network.sh"
 export CRL="$1"
