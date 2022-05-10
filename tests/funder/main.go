@@ -52,7 +52,7 @@ func main() {
 	req := &pchannel.FundingReq{
 		Params:    params,
 		State:     state,
-		Idx:       1,
+		Idx:       0, // TODO: Check idx
 		Agreement: state.Balances,
 	}
 

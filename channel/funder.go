@@ -2,11 +2,9 @@ package channel
 
 import (
 	"context"
-	"flag"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	"github.com/perun-network/perun-fabric/pkg/json"
 	"github.com/perun-network/perun-fabric/tests"
-	"log"
 	"math/big"
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
@@ -36,11 +34,9 @@ func FunderPollingIntervalOpt(d time.Duration) FunderOpt {
 }
 
 // NewFunder returns a new Funder.
-func NewFunder(network *client.Network, opts ...FunderOpt) *Funder {
-	chainCode := flag.String("chaincode", "assetholder", "AssetHolder chaincode name") // TODO: How do we handle this? Maybe as constructor argument?
-
+func NewFunder(network *client.Network, assetHolder string, opts ...FunderOpt) *Funder {
 	f := &Funder{
-		ah:      network.GetContract(*chainCode),
+		ah:      network.GetContract(assetHolder),
 		polling: defaultPollingInterval,
 	}
 	for _, opt := range opts {
@@ -55,10 +51,10 @@ func (f *Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 	id := req.Params.ID()
 
 	if len(req.Agreement) != 1 {
-		panic("Funder: Funding request holds != 1 asset.")
+		panic("Funder: Funding request does not hold one asset.")
 	}
 	assetIndex := 0
-	funding := req.Agreement[assetIndex][req.Idx]
+	funding := req.Agreement[assetIndex][req.Idx] // TODO: Check req.Idx
 
 	// Make deposit.
 	err := f.deposit(id, funding)
@@ -76,7 +72,7 @@ func (f *Funder) awaitFundingComplete(ctx context.Context, req channel.FundingRe
 	for {
 		funded, err := f.totalHolding(req.Params.ID(), req.Params.Parts)
 		if err != nil {
-			log.Printf("Warning: Error querying deposit: %v\n", err)
+			return err
 		}
 
 		if funded.Cmp(total) >= 0 {
@@ -89,7 +85,6 @@ func (f *Funder) awaitFundingComplete(ctx context.Context, req channel.FundingRe
 		case <-time.After(f.polling):
 		}
 	}
-
 }
 
 func (f *Funder) deposit(id channel.ID, amount *big.Int) error {
