@@ -190,3 +190,28 @@ func (ch *SignedChannel) Clone() *SignedChannel {
 		Sigs:   wallet.CloneSigs(ch.Sigs),
 	}
 }
+
+func ConvertToSignedChannel(req channel.AdjudicatorReq) (*SignedChannel, error) {
+	p := req.Params.Clone()
+	params := Params{
+		ChallengeDuration: p.ChallengeDuration,
+		Parts:             p.Parts,
+		Nonce:             p.Nonce,
+	}
+
+	s := req.Tx.State.Clone()
+	if len(s.Balances) != 1 {
+		return nil, fmt.Errorf("Only single assets supported.")
+	}
+	state := State{
+		ID:       s.ID,
+		Version:  s.Version,
+		Balances: s.Balances[0], // We only support a single asset
+	}
+
+	return &SignedChannel{
+		Params: params,
+		State:  state,
+		Sigs:   req.Tx.Sigs,
+	}, nil
+}

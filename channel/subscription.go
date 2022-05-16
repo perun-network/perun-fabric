@@ -26,18 +26,22 @@ import (
 
 // EventSubscription provides methods for consuming channel events.
 type EventSubscription struct {
-	evSub <-chan *client.ChaincodeEvent
-	once  sync.Once
+	listener <-chan *client.ChaincodeEvent // Listen for events here
+	closed   chan struct{}                 // closed signals if the sub is closed
+	err      chan error                    // err forwards errors during event parsing
+	once     sync.Once                     // once used to close channels
 }
 
-func NewEventSubscription(ctx context.Context, network client.Network, adjudicator string) (*EventSubscription, error) {
+func NewEventSubscription(ctx context.Context, ch channel.ID, network client.Network, adjudicator string) (*EventSubscription, error) {
 	ce, err := network.ChaincodeEvents(ctx, adjudicator)
 	if err != nil {
 		return nil, fmt.Errorf("concluding: %w", err) // TODO: error description
 	}
 
 	return &EventSubscription{
-		evSub: ce,
+		listener: ce,
+		closed:   make(chan struct{}),
+		err:      make(chan error, 1),
 	}, nil
 }
 
@@ -47,21 +51,19 @@ func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	eventChan := make(chan channel.AdjudicatorEvent)
+	errChan := make(chan error)
+
 	go func() {
 		for {
-			e := <-s.evSub // TODO: Query state from here
-			event, err := s.makeEvent(e)
+			e := <-s.listener
+			event, err := s.makeEvent(*e)
 
-			//if err != nil && err.Error() != "Unknown dispute: query wasm contract failed" {
-			//	errChan <- err
-			//	return
-			//}
-
-			//if !d.Equal(s.prev) {
-			//	s.prev = d
-			//	eventChan <- s.makeEvent(d)
-			//	return
-			// }
+			if err != nil {
+				errChan <- err // Propagate error
+				return
+			}
+			eventChan <- event
 
 			select {
 			case <-ctx.Done():
@@ -95,12 +97,12 @@ func (s *EventSubscription) Err() error {
 
 // Close closes the subscription.
 func (s *EventSubscription) Close() error {
-	s.once.Do(func() { close(s.evSub) })
+	s.once.Do(func() { close(s.closed) })
 	return nil
 }
 
 func (s *EventSubscription) makeEvent(e client.ChaincodeEvent) (channel.AdjudicatorEvent, error) {
 	// TODO: Parsing event logic
-	event := channel.NewRegisteredEvent(cID, timeout, v, state, nil)
-	return event, nil
+	// event := channel.NewRegisteredEvent(cID, timeout, v, state, nil)
+	return nil, nil
 }

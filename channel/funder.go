@@ -54,7 +54,7 @@ func (f *Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 		panic("Funder: Funding request does not hold one asset.")
 	}
 	assetIndex := 0
-	funding := req.Agreement[assetIndex][req.Idx] // TODO: Check req.Idx
+	funding := req.Agreement[assetIndex][req.Idx]
 
 	// Make deposit.
 	err := f.deposit(id, funding)

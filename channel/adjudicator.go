@@ -23,24 +23,14 @@ const (
 // Adjudicator provides methods for dispute resolution on the ledger.
 type Adjudicator struct {
 	adj     *client.Contract
+	net     client.Network
 	polling time.Duration
 }
 
-type AdjudicatorOpt func(*Adjudicator)
-
-func AdjudicatorPollingIntervalOpt(d time.Duration) AdjudicatorOpt {
-	return func(a *Adjudicator) {
-		a.polling = d
-	}
-}
-
-func NewAdjudicator(network *client.Network, adjudicator string, opts ...AdjudicatorOpt) *Adjudicator {
+func NewAdjudicator(adjContract *client.Contract, network client.Network) *Adjudicator {
 	a := &Adjudicator{
-		adj:     network.GetContract(adjudicator),
-		polling: defaultPollingInterval,
-	}
-	for _, opt := range opts {
-		opt(a)
+		adj: adjContract,
+		net: network,
 	}
 	return a
 }
@@ -52,7 +42,10 @@ func (a *Adjudicator) Register(ctx context.Context, req channel.AdjudicatorReq, 
 	if len(subChannels) > 0 {
 		return fmt.Errorf("subchannels not supported")
 	}
-	sigCh := a.createSignedChannel(req) // Repackaging - TODO: Check for a better way here
+	sigCh, err := adj.ConvertToSignedChannel(req) // Repackaging - TODO: Check for a better way here
+	if err != nil {
+		return fmt.Errorf("register: %w", err)
+	}
 	return a.register(sigCh)
 }
 
@@ -64,15 +57,36 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 	if len(subStates) > 0 {
 		return fmt.Errorf("subchannels not supported")
 	}
-	// TODO: Check how ctx can be used
-	sigCh := a.createSignedChannel(req) // Repackaging - TODO: Check for a better way here
-	err := a.register(sigCh)            // TODO: Does this trigger a dispute?
+	sigCh, err := adj.ConvertToSignedChannel(req)
+	if err != nil {
+		return fmt.Errorf("conversion: %w", err)
+	}
+
+	err = a.register(sigCh)
 	if err != nil {
 		return fmt.Errorf("concluding: %w", err)
 	}
 
-	_, err = a.withdraw(req.Params.ID())
-	return err
+	for {
+		_, err = a.withdraw(req.Params.ID())
+		waitFor := time.Second * 1
+		// If state is not final (and withdraw is blocked) we receive a ChallengeTimeoutError
+		if err != nil {
+			if cte, ok := err.(adj.ChallengeTimeoutError); ok {
+				timeout := cte.Timeout.(adj.StdTimestamp).Time()
+				now := cte.Now.(adj.StdTimestamp).Time()
+				waitFor = timeout.Sub(now) // Time until challenge duration is passed.
+			}
+		} else { // Error must be nil here.
+			return err
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(waitFor):
+		}
+	}
 }
 
 // Progress progresses the state of a previously registered channel on-chain.
@@ -88,30 +102,12 @@ func (a *Adjudicator) Progress(ctx context.Context, req channel.ProgressReq) err
 // framework will call Close on the subscription once the respective channel
 // controller shuts down.
 func (a *Adjudicator) Subscribe(ctx context.Context, ch channel.ID) (channel.AdjudicatorSubscription, error) {
-	sub := NewEventSubscription(a, ch)
+	sub, err := NewEventSubscription(ctx, ch, a.net, a.adj.ChaincodeName()) // TODO: Event parsing inside subscription.go
+
+	if err != nil {
+		return nil, fmt.Errorf("subscribe: %w", err)
+	}
 	return sub, nil
-}
-
-func (a *Adjudicator) createSignedChannel(req channel.AdjudicatorReq) *adj.SignedChannel {
-	p := req.Params.Clone()
-	params := adj.Params{
-		ChallengeDuration: p.ChallengeDuration,
-		Parts:             p.Parts,
-		Nonce:             p.Nonce,
-	}
-
-	s := req.Tx.State.Clone()
-	state := adj.State{
-		ID:       s.ID,
-		Version:  s.Version,
-		Balances: s.Balances[0], // We only support a single asset
-	}
-
-	return &adj.SignedChannel{
-		Params: params,
-		State:  state,
-		Sigs:   req.Tx.Sigs,
-	}
 }
 
 func (a *Adjudicator) deposit(id channel.ID, amount *big.Int) error {

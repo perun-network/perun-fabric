@@ -13,6 +13,12 @@ import (
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 )
 
+const (
+	registeredEvent = "RegisteredEvent"
+	progressedEvent = "ProgressedEvent"
+	concludedEvent  = "ConcludedEvent"
+)
+
 type Adjudicator struct {
 	contractapi.Contract
 }
@@ -62,6 +68,8 @@ func (a *Adjudicator) Register(ctx contractapi.TransactionContextInterface,
 	if err := json.Unmarshal([]byte(chStr), &ch); err != nil {
 		return err
 	}
+
+	//ctx.GetStub().SetEvent(registeredEvent, ) //TODO: Check success
 	return a.contract(ctx).Register(&ch)
 }
 
