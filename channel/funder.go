@@ -34,9 +34,9 @@ func FunderPollingIntervalOpt(d time.Duration) FunderOpt {
 }
 
 // NewFunder returns a new Funder.
-func NewFunder(network *client.Network, assetHolder string, opts ...FunderOpt) *Funder {
+func NewFunder(assetHolder *client.Contract, opts ...FunderOpt) *Funder {
 	f := &Funder{
-		ah:      network.GetContract(assetHolder),
+		ah:      assetHolder,
 		polling: defaultPollingInterval,
 	}
 	for _, opt := range opts {

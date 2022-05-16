@@ -34,7 +34,8 @@ func main() {
 	defer gateway.Close()
 
 	network := gateway.GetNetwork(tests.ChannelName)
-	funder := channel.NewFunder(network, *chainCode)
+	ah := network.GetContract(*chainCode)
+	funder := channel.NewFunder(ah)
 
 	rng := test.Prng(test.NameStr("FabricFunder"))
 	id, addr := chtest.NewRandomChannelID(rng), acc.Address()
