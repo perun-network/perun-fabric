@@ -2,35 +2,41 @@ package channel
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
-	pkgjson "github.com/perun-network/perun-fabric/pkg/json"
-	"github.com/perun-network/perun-fabric/tests"
-	"math/big"
+	"github.com/perun-network/perun-fabric/channel/binding"
 	"perun.network/go-perun/channel"
-	"perun.network/go-perun/wallet"
 	"time"
 )
 
-// TODO: Unite constants with funder
 const (
-	txStateReg = "StateReg"
-	txRegister = "Register"
+	defaultAdjPollingInterval = 1 * time.Second
 )
 
 // Adjudicator provides methods for dispute resolution on the ledger.
 type Adjudicator struct {
-	adj     *client.Contract
+	binding *binding.Adjudicator
 	net     client.Network
-	polling time.Duration
+	polling time.Duration // The polling interval.
 }
 
-func NewAdjudicator(adjContract *client.Contract, network client.Network) *Adjudicator {
+type AdjudicatorOpt func(*Adjudicator)
+
+func AdjudicatorPollingIntervalOpt(d time.Duration) AdjudicatorOpt {
+	return func(a *Adjudicator) {
+		a.polling = d
+	}
+}
+
+func NewAdjudicator(adjContract *binding.Adjudicator, network client.Network, opts ...AdjudicatorOpt) *Adjudicator {
 	a := &Adjudicator{
-		adj: adjContract,
-		net: network,
+		binding: adjContract,
+		net:     network,
+		polling: defaultAdjPollingInterval,
+	}
+	for _, opt := range opts {
+		opt(a)
 	}
 	return a
 }
@@ -46,7 +52,7 @@ func (a *Adjudicator) Register(ctx context.Context, req channel.AdjudicatorReq, 
 	if err != nil {
 		return fmt.Errorf("register: %w", err)
 	}
-	return a.register(sigCh)
+	return a.binding.Register(sigCh)
 }
 
 // Withdraw concludes and withdraws the registered state, so that the
@@ -62,13 +68,13 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 		return fmt.Errorf("conversion: %w", err)
 	}
 
-	err = a.register(sigCh)
+	err = a.binding.Register(sigCh)
 	if err != nil {
 		return fmt.Errorf("concluding: %w", err)
 	}
 
 	for {
-		_, err = a.withdraw(req.Params.ID())
+		_, err = a.binding.Withdraw(req.Params.ID())
 		waitFor := time.Second * 1
 		// If state is not final (and withdraw is blocked) we receive a ChallengeTimeoutError
 		if err != nil {
@@ -77,8 +83,8 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 				now := cte.Now.(adj.StdTimestamp).Time()
 				waitFor = timeout.Sub(now) // Time until challenge duration is passed.
 			}
-		} else { // Error must be nil here.
-			return err
+		} else {
+			return nil
 		}
 
 		select {
@@ -102,65 +108,9 @@ func (a *Adjudicator) Progress(ctx context.Context, req channel.ProgressReq) err
 // framework will call Close on the subscription once the respective channel
 // controller shuts down.
 func (a *Adjudicator) Subscribe(ctx context.Context, ch channel.ID) (channel.AdjudicatorSubscription, error) {
-	sub, err := NewEventSubscription(ctx, ch, a.net, a.adj.ChaincodeName()) // TODO: Event parsing inside subscription.go
-
+	sub, err := NewEventSubscription(a, ch)
 	if err != nil {
 		return nil, fmt.Errorf("subscribe: %w", err)
 	}
 	return sub, nil
-}
-
-func (a *Adjudicator) deposit(id channel.ID, amount *big.Int) error {
-	args, err := pkgjson.MultiMarshal(id, amount)
-	if err != nil {
-		return err
-	}
-	_, err = a.adj.SubmitTransaction(txDeposit, args...)
-	return err
-}
-
-func (a *Adjudicator) holding(id channel.ID, addr wallet.Address) (*big.Int, error) {
-	args, err := pkgjson.MultiMarshal(id, addr)
-	if err != nil {
-		return nil, err
-	}
-	return tests.BigIntWithError(a.adj.SubmitTransaction(txHolding, args...))
-}
-
-func (a *Adjudicator) totalHolding(id channel.ID, addrs []wallet.Address) (*big.Int, error) {
-	args, err := pkgjson.MultiMarshal(id, addrs)
-	if err != nil {
-		return nil, err
-	}
-	return tests.BigIntWithError(a.adj.SubmitTransaction(txTotalHolding, args...))
-}
-
-func (a *Adjudicator) register(ch *adj.SignedChannel) error {
-	arg, err := json.Marshal(ch)
-	if err != nil {
-		return err
-	}
-	_, err = a.adj.SubmitTransaction(txRegister, string(arg))
-	return err
-}
-
-func (a *Adjudicator) stateReg(id channel.ID) (*adj.StateReg, error) {
-	arg, err := json.Marshal(id)
-	if err != nil {
-		return nil, err
-	}
-	regJson, err := a.adj.SubmitTransaction(txStateReg, string(arg))
-	if err != nil {
-		return nil, err
-	}
-	var reg adj.StateReg
-	return &reg, json.Unmarshal(regJson, &reg)
-}
-
-func (a *Adjudicator) withdraw(id channel.ID) (*big.Int, error) {
-	args, err := pkgjson.MultiMarshal(id)
-	if err != nil {
-		return nil, err
-	}
-	return tests.BigIntWithError(a.adj.SubmitTransaction(txWithdraw, args...))
 }

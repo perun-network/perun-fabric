@@ -16,11 +16,7 @@ package channel
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"github.com/hyperledger/fabric-gateway/pkg/client"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
-	"github.com/perun-network/perun-fabric/chaincode"
 	"sync"
 	"time"
 
@@ -29,22 +25,21 @@ import (
 
 // EventSubscription provides methods for consuming channel events.
 type EventSubscription struct {
-	listener <-chan *client.ChaincodeEvent // Listen for events here
-	closed   chan struct{}                 // closed signals if the sub is closed
-	err      chan error                    // err forwards errors during event parsing
-	once     sync.Once                     // once used to close channels
+	adjudicator *Adjudicator  // binding is the referenced adjudicator instance.
+	channelID   channel.ID    // channelID is the channel identifier
+	prev        adj.StateReg  // prev is the previous channel state
+	closed      chan struct{} // closed signals if the sub is closed
+	err         chan error    // err forwards errors during event parsing
+	once        sync.Once     // once used to close channels
 }
 
-func NewEventSubscription(ctx context.Context, ch channel.ID, network client.Network, adjudicator string) (*EventSubscription, error) {
-	ce, err := network.ChaincodeEvents(ctx, adjudicator)
-	if err != nil {
-		return nil, fmt.Errorf("concluding: %w", err) // TODO: error description
-	}
-
+func NewEventSubscription(a *Adjudicator, ch channel.ID) (*EventSubscription, error) {
 	return &EventSubscription{
-		listener: ce,
-		closed:   make(chan struct{}),
-		err:      make(chan error, 1),
+		adjudicator: a,
+		channelID:   ch,
+		closed:      make(chan struct{}),
+		err:         make(chan error, 1),
+		prev:        adj.StateReg{},
 	}, nil
 }
 
@@ -59,19 +54,23 @@ func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 
 	go func() {
 		for {
-			e := <-s.listener
-			event, err := s.makeEvent(*e)
-
+			ch := s.channelID
+			d, err := s.adjudicator.binding.StateReg(ch) // Read state
 			if err != nil {
-				errChan <- err // Propagate error
+				errChan <- err
 				return
 			}
-			eventChan <- event
+
+			if !d.Equal(s.prev) {
+				s.prev = *d
+				eventChan <- s.makeEvent(*d)
+				return
+			}
 
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(defaultPollingInterval):
+			case <-time.After(s.adjudicator.polling):
 			}
 		}
 	}()
@@ -104,18 +103,14 @@ func (s *EventSubscription) Close() error {
 	return nil
 }
 
-func (s *EventSubscription) makeEvent(e client.ChaincodeEvent) (channel.AdjudicatorEvent, error) {
-	var ch adj.SignedChannel
-	if err := json.Unmarshal(e.Payload, &ch); err != nil {
-		return nil, err
-	}
-
-	state := ch.State.CoreState()
+func (s *EventSubscription) makeEvent(d adj.StateReg) channel.AdjudicatorEvent {
+	state := d.State.CoreState()
 	cID := state.ID
 	v := state.Version
-	// timeout := channel.Timeout() TODO: How can we get the timeout here? Via stateReg?
-	if e.EventName == chaincode.ConcludedEvent {
-		return channel.NewConcludedEvent(cID, nil, v), nil
+
+	// timeout := d.Timeout // TODO/Question: How to convert the timeout?
+	if d.IsFinal { // TODO/Question: Does checking finalization work here?
+		return channel.NewConcludedEvent(cID, nil, v) // TODO: Timeout missing
 	}
-	return channel.NewRegisteredEvent(cID, nil, v, state, nil), nil
+	return channel.NewRegisteredEvent(cID, nil, v, state, nil) // TODO: Timeout missing
 }
