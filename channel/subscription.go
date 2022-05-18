@@ -16,8 +16,11 @@ package channel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
+	adj "github.com/perun-network/perun-fabric/adjudicator"
+	"github.com/perun-network/perun-fabric/chaincode"
 	"sync"
 	"time"
 
@@ -102,7 +105,17 @@ func (s *EventSubscription) Close() error {
 }
 
 func (s *EventSubscription) makeEvent(e client.ChaincodeEvent) (channel.AdjudicatorEvent, error) {
-	// TODO: Parsing event logic
-	// event := channel.NewRegisteredEvent(cID, timeout, v, state, nil)
-	return nil, nil
+	var ch adj.SignedChannel
+	if err := json.Unmarshal(e.Payload, &ch); err != nil {
+		return nil, err
+	}
+
+	state := ch.State.CoreState()
+	cID := state.ID
+	v := state.Version
+	// timeout := channel.Timeout() TODO: How can we get the timeout here? Via stateReg?
+	if e.EventName == chaincode.ConcludedEvent {
+		return channel.NewConcludedEvent(cID, nil, v), nil
+	}
+	return channel.NewRegisteredEvent(cID, nil, v, state, nil), nil
 }
