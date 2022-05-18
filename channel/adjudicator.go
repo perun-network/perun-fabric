@@ -3,6 +3,7 @@ package channel
 import (
 	"context"
 	"fmt"
+	"github.com/hyperledger/fabric-gateway/pkg/client"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/perun-network/perun-fabric/channel/binding"
 	"perun.network/go-perun/channel"
@@ -27,9 +28,9 @@ func AdjudicatorPollingIntervalOpt(d time.Duration) AdjudicatorOpt {
 	}
 }
 
-func NewAdjudicator(adjContract *binding.Adjudicator, opts ...AdjudicatorOpt) *Adjudicator {
+func NewAdjudicator(network *client.Network, chaincode string, opts ...AdjudicatorOpt) *Adjudicator {
 	a := &Adjudicator{
-		binding: adjContract,
+		binding: binding.NewAdjudicatorBinding(network, chaincode),
 		polling: defaultAdjPollingInterval,
 	}
 	for _, opt := range opts {

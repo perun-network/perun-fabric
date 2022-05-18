@@ -2,6 +2,7 @@ package channel
 
 import (
 	"context"
+	"github.com/hyperledger/fabric-gateway/pkg/client"
 	"github.com/perun-network/perun-fabric/channel/binding"
 	"perun.network/go-perun/channel"
 	"time"
@@ -25,9 +26,9 @@ func FunderPollingIntervalOpt(d time.Duration) FunderOpt {
 }
 
 // NewFunder returns a new Funder.
-func NewFunder(assetHolder *binding.AssetHolder, opts ...FunderOpt) *Funder {
+func NewFunder(network *client.Network, chaincode string, opts ...FunderOpt) *Funder {
 	f := &Funder{
-		binding: assetHolder,
+		binding: binding.NewAssetHolder(network, chaincode),
 		polling: defaultFunderPollingInterval,
 	}
 	for _, opt := range opts {
