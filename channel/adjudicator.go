@@ -3,7 +3,6 @@ package channel
 import (
 	"context"
 	"fmt"
-	"github.com/hyperledger/fabric-gateway/pkg/client"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/perun-network/perun-fabric/channel/binding"
 	"perun.network/go-perun/channel"
@@ -16,9 +15,8 @@ const (
 
 // Adjudicator provides methods for dispute resolution on the ledger.
 type Adjudicator struct {
-	binding *binding.Adjudicator
-	net     client.Network
-	polling time.Duration // The polling interval.
+	binding *binding.Adjudicator // binding gives access to the Adjudicator contract.
+	polling time.Duration        // The polling interval for event subscription.
 }
 
 type AdjudicatorOpt func(*Adjudicator)
@@ -29,10 +27,9 @@ func AdjudicatorPollingIntervalOpt(d time.Duration) AdjudicatorOpt {
 	}
 }
 
-func NewAdjudicator(adjContract *binding.Adjudicator, network client.Network, opts ...AdjudicatorOpt) *Adjudicator {
+func NewAdjudicator(adjContract *binding.Adjudicator, opts ...AdjudicatorOpt) *Adjudicator {
 	a := &Adjudicator{
 		binding: adjContract,
-		net:     network,
 		polling: defaultAdjPollingInterval,
 	}
 	for _, opt := range opts {

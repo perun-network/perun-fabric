@@ -12,8 +12,8 @@ const (
 )
 
 type Funder struct {
-	binding *binding.AssetHolder // The AssetHolder contract.
-	polling time.Duration        // The polling interval.
+	binding *binding.AssetHolder // binding gives access to the AssetHolder contract.
+	polling time.Duration        // The polling interval to wait for complete funding.
 }
 
 type FunderOpt func(*Funder)
