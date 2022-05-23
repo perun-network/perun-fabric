@@ -1,4 +1,4 @@
-//  Copyright 2021 PolyCrypt GmbH
+//  Copyright 2022 PolyCrypt GmbH
 //
 //  Licensed under the Apache License, Version 2.0 (the "License");
 //  you may not use this file except in compliance with the License.
@@ -107,10 +107,11 @@ func (s *EventSubscription) makeEvent(d adj.StateReg) channel.AdjudicatorEvent {
 	state := d.State.CoreState()
 	cID := state.ID
 	v := state.Version
+	t := d.Timeout.(adj.StdTimestamp).Time()
+	timeout := makeTimeout(t, s.adjudicator.polling) // TODO: Timeout not implemented
 
-	// timeout := d.Timeout // TODO/Question: How to convert the timeout?
 	if d.IsFinal { // TODO/Question: Does checking finalization work here?
-		return channel.NewConcludedEvent(cID, nil, v) // TODO: Timeout missing
+		return channel.NewConcludedEvent(cID, timeout, v)
 	}
-	return channel.NewRegisteredEvent(cID, nil, v, state, nil) // TODO: Timeout missing
+	return channel.NewRegisteredEvent(cID, timeout, v, state, nil)
 }
