@@ -15,7 +15,7 @@ type AssetHolder struct {
 	Contract *client.Contract
 }
 
-func NewAssetHolder(network *client.Network, chainCode string) *AssetHolder {
+func NewAssetHolderBinding(network *client.Network, chainCode string) *AssetHolder {
 	return &AssetHolder{Contract: network.GetContract(chainCode)}
 }
 

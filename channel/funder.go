@@ -28,7 +28,7 @@ func FunderPollingIntervalOpt(d time.Duration) FunderOpt {
 // NewFunder returns a new Funder.
 func NewFunder(network *client.Network, chaincode string, opts ...FunderOpt) *Funder {
 	f := &Funder{
-		binding: binding.NewAssetHolder(network, chaincode),
+		binding: binding.NewAssetHolderBinding(network, chaincode),
 		polling: defaultFunderPollingInterval,
 	}
 	for _, opt := range opts {
