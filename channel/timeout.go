@@ -38,7 +38,7 @@ func makeTimeout(
 // IsElapsed should return whether the timeout has elapsed at the time of
 // the call of this method.
 func (t *Timeout) IsElapsed(ctx context.Context) bool {
-	return false
+	return true
 
 	// TODO: There is no block time in fabric (yet) (see links below)
 	// https://jira.hyperledger.org/browse/FAB-15584
