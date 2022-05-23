@@ -138,7 +138,7 @@ func (s *StateReg) Clone() *StateReg {
 	}
 }
 
-func (s StateReg) Equal(_s StateReg) bool {
+func (s *StateReg) Equal(_s StateReg) bool {
 	err := s.CoreState().Equal(_s.CoreState())
 	return err != nil
 }
