@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"github.com/perun-network/perun-fabric/channel"
-	"github.com/perun-network/perun-fabric/channel/binding"
 	"github.com/perun-network/perun-fabric/tests"
 	"log"
 	pchannel "perun.network/go-perun/channel"
@@ -35,8 +34,7 @@ func main() {
 	defer gateway.Close()
 
 	network := gateway.GetNetwork(tests.ChannelName)
-	ah := binding.NewAssetHolder(network, *chainCode)
-	funder := channel.NewFunder(ah)
+	funder := channel.NewFunder(network, *chainCode)
 
 	rng := test.Prng(test.NameStr("FabricFunder"))
 	addr := acc.Address()
