@@ -212,6 +212,7 @@ func ConvertToSignedChannel(req channel.AdjudicatorReq) (*SignedChannel, error) 
 		ID:       s.ID,
 		Version:  s.Version,
 		Balances: s.Balances[0], // We only support a single asset
+		IsFinal:  s.IsFinal,
 	}
 
 	return &SignedChannel{
