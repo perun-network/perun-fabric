@@ -25,36 +25,21 @@ type Timeout struct {
 	polling time.Duration
 }
 
-func makeTimeout(
-	t time.Time,
-	polling time.Duration,
-) *Timeout {
+func makeTimeout(t time.Time, polling time.Duration) *Timeout {
 	return &Timeout{
 		t:       t,
 		polling: polling,
 	}
 }
 
-// IsElapsed should return whether the timeout has elapsed at the time of
-// the call of this method.
+// IsElapsed should return whether the timeout has elapsed at the time of the call of this method.
 func (t *Timeout) IsElapsed(ctx context.Context) bool {
-	return true
-
-	// TODO: There is no block time in fabric (yet) (see links below)
-	// https://jira.hyperledger.org/browse/FAB-15584
-	// https://stackoverflow.com/questions/59135319/does-the-block-contain-the-generation-time-of-the-block
-
-	// resp, err := t.c.GetLatestBlock(ctx, &tmservice.GetLatestBlockRequest{})
-
-	// if err != nil {
-	//	log.Printf("Warning: Error getting latest block: %v\n", err)
-	//	return false
-	// }
-	// return resp.Block.Header.Time.After(t.t)
+	current := time.Now()     // Fabric does not have a block time.
+	return current.After(t.t) // Instead, use the system time to compare against.
 }
 
-// Wait waits for the timeout to elapse. If the context is canceled, Wait
-// should return immediately with the context's error.
+// Wait waits for the timeout to elapse.
+// If the context is canceled, Wait returns immediately with the context's error.
 func (t *Timeout) Wait(ctx context.Context) error {
 	for !t.IsElapsed(ctx) {
 		select {
