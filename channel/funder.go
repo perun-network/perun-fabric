@@ -19,7 +19,7 @@ type Funder struct {
 
 type FunderOpt func(*Funder)
 
-func FunderPollingIntervalOpt(d time.Duration) FunderOpt {
+func WithPollingInterval(d time.Duration) FunderOpt {
 	return func(f *Funder) {
 		f.polling = d
 	}

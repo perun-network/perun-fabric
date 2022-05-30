@@ -22,7 +22,7 @@ type Adjudicator struct {
 
 type AdjudicatorOpt func(*Adjudicator)
 
-func AdjudicatorPollingIntervalOpt(d time.Duration) AdjudicatorOpt {
+func WithSubPollingInterval(d time.Duration) AdjudicatorOpt {
 	return func(a *Adjudicator) {
 		a.polling = d
 	}
