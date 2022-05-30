@@ -140,7 +140,7 @@ func (s *StateReg) Clone() *StateReg {
 
 func (s *StateReg) Equal(_s StateReg) bool {
 	err := s.CoreState().Equal(_s.CoreState())
-	return err != nil
+	return err == nil
 }
 
 func (s *StateReg) UnmarshalJSON(data []byte) error {
