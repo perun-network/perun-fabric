@@ -63,7 +63,7 @@ func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 
 			if !d.Equal(s.prev) {
 				s.prev = *d
-				eventChan <- s.makeEvent(*d)
+				eventChan <- s.makeEvent(d)
 				return
 			}
 
@@ -103,14 +103,14 @@ func (s *EventSubscription) Close() error {
 	return nil
 }
 
-func (s *EventSubscription) makeEvent(d adj.StateReg) channel.AdjudicatorEvent {
+func (s *EventSubscription) makeEvent(d *adj.StateReg) channel.AdjudicatorEvent {
 	state := d.State.CoreState()
 	cID := state.ID
 	v := state.Version
 	t := d.Timeout.(adj.StdTimestamp).Time()
-	timeout := makeTimeout(t, s.adjudicator.polling) // TODO: Timeout not implemented
+	timeout := makeTimeout(t, s.adjudicator.polling)
 
-	if d.IsFinal { // TODO/Question: Does checking finalization work here?
+	if d.IsFinal {
 		return channel.NewConcludedEvent(cID, timeout, v)
 	}
 	return channel.NewRegisteredEvent(cID, timeout, v, state, nil)
