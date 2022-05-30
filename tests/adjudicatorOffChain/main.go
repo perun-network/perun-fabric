@@ -15,7 +15,6 @@ import (
 )
 
 var chainCode = flag.String("chaincode", "adjudicator", "AssetHolder chaincode name")
-var org = flag.Uint("org", 1, "Organization# of user to perform txs as (1 or 2)")
 
 const testTimeout = 10 * time.Second
 
@@ -103,7 +102,6 @@ func main() {
 		tests.RequireEqual(bal, holding, "Holding")
 	}
 
-	fmt.Println("1")
 	// Subscription: Check registered event version 1 and wait for timeout.
 	{
 		e, ok := eventSub.Next().(*pchannel.RegisteredEvent)
