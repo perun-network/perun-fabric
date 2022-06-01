@@ -107,7 +107,7 @@ func (s *EventSubscription) makeEvent(d *adj.StateReg) channel.AdjudicatorEvent 
 	state := d.State.CoreState()
 	cID := state.ID
 	v := state.Version
-	t := d.Timeout.(adj.StdTimestamp).Time()
+	t := d.Timeout.Time()
 	timeout := makeTimeout(t, s.adjudicator.polling)
 
 	if d.IsFinal {

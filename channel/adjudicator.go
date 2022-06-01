@@ -61,36 +61,34 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 	if len(subStates) > 0 {
 		return fmt.Errorf("subchannels not supported")
 	}
-	sigCh, err := adj.ConvertToSignedChannel(req)
+
+	reg, err := a.binding.StateReg(req.Tx.ID)
 	if err != nil {
-		return fmt.Errorf("conversion: %w", err)
+		return err
 	}
 
-	err = a.binding.Register(sigCh)
-	if err != nil {
-		return fmt.Errorf("concluding: %w", err)
-	}
-
-	for {
-		_, err = a.binding.Withdraw(req.Params.ID())
-		waitFor := time.Second * 1
-		// If state is not final (and withdraw is blocked) we receive a ChallengeTimeoutError
-		if err != nil {
-			if cte, ok := err.(adj.ChallengeTimeoutError); ok {
-				timeout := cte.Timeout.(adj.StdTimestamp).Time()
-				now := cte.Now.(adj.StdTimestamp).Time()
-				waitFor = timeout.Sub(now) // Time until challenge duration is passed.
-			}
-		} else {
-			return nil
+	// Dispute case
+	if !reg.IsFinal {
+		_, err = a.binding.Withdraw(req.Tx.ID)
+		if err == nil {
+			return nil // Withdraw successful
 		}
 
+		waitFor := time.Second * time.Duration(req.Params.ChallengeDuration) // TODO: This is definitely not optimal. Better way: Parse withdraw error to get time diff
 		select {
+		case <-time.After(waitFor):
+			fmt.Println("FINISHED: ", waitFor)
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(waitFor):
 		}
 	}
+
+	// Concluded (or waited for challenge duration in case of dispute)
+	_, err = a.binding.Withdraw(req.Tx.ID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Progress progresses the state of a previously registered channel on-chain.

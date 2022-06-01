@@ -16,7 +16,7 @@ import (
 
 var chainCode = flag.String("chaincode", "adjudicator", "AssetHolder chaincode name")
 
-const testTimeout = 10 * time.Second
+const testTimeout = 120 * time.Second
 
 func main() {
 	flag.Parse()
@@ -68,6 +68,9 @@ func main() {
 		tests.FatalErr("register version 0", err)
 	}
 
+	reg, _ := adjs[0].Binding.StateReg(id)
+	fmt.Println(reg)
+	fmt.Println("0")
 	// Subscription: Check registered event version 0.
 	{
 		e, ok := eventSub.Next().(*pchannel.RegisteredEvent)
@@ -77,6 +80,7 @@ func main() {
 		tests.RequireEqual(e.State.Equal(ch.State.CoreState()) == nil, true, "equal state")
 	}
 
+	fmt.Println("1")
 	// Adjudicator: Register version 1.
 	setup.State.Version = 1
 	setup.State.IsFinal = false
@@ -91,7 +95,7 @@ func main() {
 			},
 		}
 		err = adjs[1].Adjudicator.Register(ctx, req, subChannels)
-		tests.FatalErr("register version 1", err)
+		tests.FatalClientErr("register version 1", err)
 	}
 
 	for i, part := range setup.Parts {
@@ -109,8 +113,8 @@ func main() {
 		tests.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
 		tests.RequireEqual(e.Version() == ch.State.CoreState().Version, true, "version")
 		tests.RequireEqual(e.State.Equal(ch.State.CoreState()) == nil, true, "equal state")
-		err = e.Timeout().Wait(ctx)
-		tests.FatalErr("registered: wait", err)
+		//err = e.Timeout().Wait(ctx)
+		//tests.FatalErr("registered: wait", err)
 	}
 
 	// Adjudicator: Progress.
@@ -130,7 +134,7 @@ func main() {
 			req.Idx = pchannel.Index(i)
 			req.Acc = adjs[i].Account
 			err = adjs[i].Adjudicator.Withdraw(ctx, req, MakeStateMapFromSignedStates(subChannels...))
-			tests.FatalErr("withdraw", err)
+			tests.FatalClientErr("withdraw", err)
 		}
 	}
 

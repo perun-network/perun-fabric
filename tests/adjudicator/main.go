@@ -58,7 +58,7 @@ func main() {
 	log.Print("Checking final state")
 	regfinal0, err := adjs[0].StateReg(id)
 	tests.FatalClientErr("querying state", err)
-	tests.RequireEqual(regfinal, regfinal0, "final StateReg")
+	tests.RequireEqual(regfinal.CoreState(), regfinal0.CoreState(), "final StateReg")
 
 	for i := range setup.Parts {
 		withdrawn, err := adjs[i].Withdraw(id)
