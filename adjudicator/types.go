@@ -143,28 +143,6 @@ func (s *StateReg) Equal(_s StateReg) bool {
 	return err == nil
 }
 
-func (s *StateReg) UnmarshalJSON(data []byte) error {
-	sj := struct {
-		State   *State          `json:"state"`
-		Timeout json.RawMessage `json:"timeout"`
-	}{
-		State: &s.State,
-	}
-	if err := json.Unmarshal(data, &sj); err != nil {
-		return err
-	}
-
-	timeout := NewTimestamp()
-	// Hide Timestamp interface to make json.Unmarshaler visible of concrete
-	// Timestamp implementation.
-	toi := timeout.(interface{})
-	if err := json.Unmarshal(sj.Timeout, &toi); err != nil {
-		return err
-	}
-	s.Timeout = timeout
-	return nil
-}
-
 func (s *StateReg) IsFinalizedAt(ts Timestamp) bool {
 	return s.IsFinal || ts.After(s.Timeout)
 }
