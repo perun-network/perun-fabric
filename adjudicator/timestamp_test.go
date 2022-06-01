@@ -43,4 +43,14 @@ func TestStdTimestamp(t *testing.T) {
 		assert.False(t, t0.Before(t0))
 		assert.False(t, t1.Before(t0))
 	})
+
+	t.Run("Marshalling", func(t *testing.T) {
+		mar, err := t0.MarshalJSON()
+		assert.NoError(t, err)
+		t2 := adj.StdNow()
+		assert.True(t, t0.Before(t2))
+		err = t2.UnmarshalJSON(mar)
+		assert.NoError(t, err)
+		assert.True(t, t0.Equal(t2))
+	})
 }

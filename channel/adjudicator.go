@@ -61,36 +61,29 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 	if len(subStates) > 0 {
 		return fmt.Errorf("subchannels not supported")
 	}
-	sigCh, err := adj.ConvertToSignedChannel(req)
+
+	reg, err := a.binding.StateReg(req.Tx.ID)
 	if err != nil {
-		return fmt.Errorf("conversion: %w", err)
+		return err
 	}
 
-	err = a.binding.Register(sigCh)
-	if err != nil {
-		return fmt.Errorf("concluding: %w", err)
-	}
+	// Dispute case
+	if !reg.IsFinal {
+		duration := reg.Timeout.Time().Sub(reg.Now.Time())
+		timeout := MakeTimeout(duration, a.polling)
 
-	for {
-		_, err = a.binding.Withdraw(req.Params.ID())
-		waitFor := time.Second * 1
-		// If state is not final (and withdraw is blocked) we receive a ChallengeTimeoutError
+		err := timeout.Wait(ctx)
 		if err != nil {
-			if cte, ok := err.(adj.ChallengeTimeoutError); ok {
-				timeout := cte.Timeout.(adj.StdTimestamp).Time()
-				now := cte.Now.(adj.StdTimestamp).Time()
-				waitFor = timeout.Sub(now) // Time until challenge duration is passed.
-			}
-		} else {
-			return nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(waitFor):
+			return err
 		}
 	}
+
+	// Concluded (or waited for challenge duration in case of dispute)
+	_, err = a.binding.Withdraw(req.Tx.ID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Progress progresses the state of a previously registered channel on-chain.
@@ -101,7 +94,6 @@ func (a *Adjudicator) Progress(ctx context.Context, req channel.ProgressReq) err
 }
 
 // Subscribe returns an AdjudicatorEvent subscription.
-//
 // The context should only be used to establish the subscription. The
 // framework will call Close on the subscription once the respective channel
 // controller shuts down.

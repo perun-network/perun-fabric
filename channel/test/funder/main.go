@@ -4,15 +4,15 @@ import (
 	"context"
 	"flag"
 	"github.com/perun-network/perun-fabric/channel"
-	"github.com/perun-network/perun-fabric/tests"
+	"github.com/perun-network/perun-fabric/channel/test"
 	"log"
 	pchannel "perun.network/go-perun/channel"
 	chtest "perun.network/go-perun/channel/test"
-	"polycry.pt/poly-go/test"
+	ptest "polycry.pt/poly-go/test"
 	"time"
 )
 
-var chainCode = flag.String("chaincode", "assetholder", "AssetHolder chaincode name")
+var assetholder = flag.String("assetholder", "assetholder-8195", "AssetHolder chaincode name")
 var org = flag.Uint("org", 1, "Organization# of user to perform txs as (1 or 2)")
 
 const testTimeout = 10 * time.Second
@@ -23,20 +23,20 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	org := tests.OrgNum(*org)
-	clientConn, err := tests.NewGrpcConnection(org)
-	tests.FatalErr("creating client conn", err)
+	org := test.OrgNum(*org)
+	clientConn, err := test.NewGrpcConnection(org)
+	test.FatalErr("creating client conn", err)
 	defer clientConn.Close()
 
 	// Create a Gateway connection for a specific client identity
-	gateway, acc, err := tests.NewGateway(org, clientConn)
-	tests.FatalErr("connecting to gateway", err)
+	gateway, acc, err := test.NewGateway(org, clientConn)
+	test.FatalErr("connecting to gateway", err)
 	defer gateway.Close()
 
-	network := gateway.GetNetwork(tests.ChannelName)
-	funder := channel.NewFunder(network, *chainCode)
+	network := gateway.GetNetwork(test.ChannelName)
+	funder := channel.NewFunder(network, *assetholder)
 
-	rng := test.Prng(test.NameStr("FabricFunder"))
+	rng := ptest.Prng(ptest.NameStr("FabricFunder"))
 	addr := acc.Address()
 
 	// Create random test parameters
@@ -59,6 +59,6 @@ func main() {
 	log.Printf("Request created: (part: %v, allocation: %v)", addr, alloc)
 
 	log.Printf("Funding...")
-	tests.FatalErr("funding", funder.Fund(ctx, *req))
+	test.FatalErr("funding", funder.Fund(ctx, *req))
 	log.Printf("Funding successful.")
 }

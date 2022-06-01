@@ -17,12 +17,13 @@ import (
 
 type (
 	Setup struct {
-		Parts  []wallet.Address
-		Accs   []wallet.Account
-		Params *adj.Params
-		State  *adj.State
-		Ledger *TestLedger
-		Adj    *adj.Adjudicator
+		Parts   []wallet.Address
+		Accs    []wallet.Account
+		Params  *adj.Params
+		State   *adj.State
+		Ledger  *TestLedger
+		Adj     *adj.Adjudicator
+		Timeout adj.Timestamp
 	}
 
 	SetupOption interface {
@@ -78,9 +79,11 @@ func NewSetup(rng *rand.Rand, opts ...SetupOption) *Setup {
 			Version:  0,
 			Balances: chtest.NewRandomBals(rng, 2),
 			IsFinal:  false,
+			Now:      ledger.Now(),
 		},
-		Ledger: ledger,
-		Adj:    adj.NewAdjudicator(ledger),
+		Ledger:  ledger,
+		Adj:     adj.NewAdjudicator(ledger),
+		Timeout: ledger.Now().Add(params.ChallengeDuration),
 	}
 
 	for _, opt := range opts {
@@ -106,7 +109,7 @@ func (s *Setup) SignedChannel() *adj.SignedChannel {
 func (s *Setup) StateReg() *adj.StateReg {
 	return &adj.StateReg{
 		State:   s.State.Clone(),
-		Timeout: s.Ledger.Now().Clone(),
+		Timeout: s.Timeout.Clone(),
 	}
 }
 

@@ -18,6 +18,7 @@ type (
 
 	State struct {
 		ID       channel.ID    `json:"id"`
+		Now      Timestamp     `json:"now"`
 		Version  uint64        `json:"version"`
 		Balances []channel.Bal `json:"balances"`
 		IsFinal  bool          `json:"final"`
@@ -99,6 +100,7 @@ func (s State) CoreState() *channel.State {
 	return &channel.State{
 		ID:      s.ID,
 		Version: s.Version,
+		IsFinal: s.IsFinal,
 		App:     channel.NoApp(),
 		Data:    channel.NoData(),
 		Allocation: channel.Allocation{
@@ -140,29 +142,7 @@ func (s *StateReg) Clone() *StateReg {
 
 func (s *StateReg) Equal(_s StateReg) bool {
 	err := s.CoreState().Equal(_s.CoreState())
-	return err == nil
-}
-
-func (s *StateReg) UnmarshalJSON(data []byte) error {
-	sj := struct {
-		State   *State          `json:"state"`
-		Timeout json.RawMessage `json:"timeout"`
-	}{
-		State: &s.State,
-	}
-	if err := json.Unmarshal(data, &sj); err != nil {
-		return err
-	}
-
-	timeout := NewTimestamp()
-	// Hide Timestamp interface to make json.Unmarshaler visible of concrete
-	// Timestamp implementation.
-	toi := timeout.(interface{})
-	if err := json.Unmarshal(sj.Timeout, &toi); err != nil {
-		return err
-	}
-	s.Timeout = timeout
-	return nil
+	return err == nil && s.Timeout.Equal(_s.Timeout)
 }
 
 func (s *StateReg) IsFinalizedAt(ts Timestamp) bool {

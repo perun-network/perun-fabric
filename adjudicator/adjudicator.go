@@ -113,6 +113,8 @@ func (a *Adjudicator) updateHoldings(ch *SignedChannel) error {
 func (a *Adjudicator) saveStateReg(ch *SignedChannel) error {
 	// determine timeout by channel finality
 	to := a.ledger.Now()
+	ch.State.Now = to
+
 	if !ch.State.IsFinal {
 		to = to.Add(ch.Params.ChallengeDuration)
 	}
@@ -131,6 +133,8 @@ func (a *Adjudicator) StateReg(id channel.ID) (*StateReg, error) {
 	} else if err != nil {
 		return nil, fmt.Errorf("querying ledger: %w", err)
 	}
+
+	reg.State.Now = a.ledger.Now() // Add the ledger timestamp.
 	return reg, nil
 }
 

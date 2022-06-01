@@ -5,7 +5,6 @@ import (
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	pkgjson "github.com/perun-network/perun-fabric/pkg/json"
-	"github.com/perun-network/perun-fabric/tests"
 	"math/big"
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
@@ -42,7 +41,7 @@ func (a *Adjudicator) Holding(id channel.ID, addr wallet.Address) (*big.Int, err
 	if err != nil {
 		return nil, err
 	}
-	return tests.BigIntWithError(a.Contract.SubmitTransaction(txHolding, args...))
+	return bigIntWithError(a.Contract.SubmitTransaction(txHolding, args...))
 }
 
 func (a *Adjudicator) TotalHolding(id channel.ID, addrs []wallet.Address) (*big.Int, error) {
@@ -50,7 +49,7 @@ func (a *Adjudicator) TotalHolding(id channel.ID, addrs []wallet.Address) (*big.
 	if err != nil {
 		return nil, err
 	}
-	return tests.BigIntWithError(a.Contract.SubmitTransaction(txTotalHolding, args...))
+	return bigIntWithError(a.Contract.SubmitTransaction(txTotalHolding, args...))
 }
 
 func (a *Adjudicator) Register(ch *adj.SignedChannel) error {
@@ -80,5 +79,14 @@ func (a *Adjudicator) Withdraw(id channel.ID) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	return tests.BigIntWithError(a.Contract.SubmitTransaction(txWithdraw, args...))
+	return bigIntWithError(a.Contract.SubmitTransaction(txWithdraw, args...))
+}
+
+func bigIntWithError(b []byte, err error) (*big.Int, error) {
+	if err != nil {
+		return nil, err
+	}
+
+	bi := new(big.Int)
+	return bi, json.Unmarshal(b, bi)
 }
