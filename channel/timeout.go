@@ -21,21 +21,23 @@ import (
 
 // Timeout represents a timeout that is bound to block time.
 type Timeout struct {
-	t       time.Time
+	timeout time.Time
 	polling time.Duration
 }
 
-func makeTimeout(t time.Time, polling time.Duration) *Timeout {
+func makeTimeout(duration time.Duration, polling time.Duration) *Timeout {
+	t := time.Now().Add(duration)
+
 	return &Timeout{
-		t:       t,
-		polling: polling,
+		timeout: t,       // t is the timeout
+		polling: polling, // polling is used to periodically check if the timeout is concluded
 	}
 }
 
-// IsElapsed should return whether the timeout has elapsed at the time of the call of this method.
+// IsElapsed should return whether the timeout has concluded at the time of the call of this method.
 func (t *Timeout) IsElapsed(ctx context.Context) bool {
-	current := time.Now()     // Fabric does not have a block time.
-	return current.After(t.t) // Instead, use the system time to compare against.
+	current := time.Now()           // Fabric does not have a block time.
+	return current.After(t.timeout) // Instead, use the system time to compare against.
 }
 
 // Wait waits for the timeout to elapse.
