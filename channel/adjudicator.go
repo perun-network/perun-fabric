@@ -69,17 +69,12 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 
 	// Dispute case
 	if !reg.IsFinal {
-		_, err = a.binding.Withdraw(req.Tx.ID)
-		if err == nil {
-			return nil // Withdraw successful
-		}
+		duration := reg.Timeout.Time().Sub(reg.Now.Time())
+		timeout := makeTimeout(duration, a.polling)
 
-		waitFor := time.Second * time.Duration(req.Params.ChallengeDuration) // TODO: This is definitely not optimal. Better way: Parse withdraw error to get time diff
-		select {
-		case <-time.After(waitFor):
-			fmt.Println("FINISHED: ", waitFor)
-		case <-ctx.Done():
-			return ctx.Err()
+		err := timeout.Wait(ctx)
+		if err != nil {
+			return err
 		}
 	}
 
