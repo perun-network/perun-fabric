@@ -16,6 +16,7 @@ package channel
 
 import (
 	"context"
+	"fmt"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"sync"
 	"time"
@@ -27,7 +28,9 @@ import (
 type EventSubscription struct {
 	adjudicator *Adjudicator  // binding is the referenced adjudicator instance.
 	channelID   channel.ID    // channelID is the channel identifier
-	prev        adj.StateReg  // prev is the previous channel state
+	prevState   adj.StateReg  // prevState is the previous channel state
+	timeout     *Timeout      // timeout is the current Event timeout
+	concluded   bool          // indicates if a concluded event was created
 	closed      chan struct{} // closed signals if the sub is closed
 	err         chan error    // err forwards errors during event parsing
 	once        sync.Once     // once used to close channels
@@ -39,7 +42,8 @@ func NewEventSubscription(a *Adjudicator, ch channel.ID) (*EventSubscription, er
 		channelID:   ch,
 		closed:      make(chan struct{}),
 		err:         make(chan error, 1),
-		prev:        adj.StateReg{},
+		prevState:   adj.StateReg{},
+		timeout:     nil,
 	}, nil
 }
 
@@ -61,9 +65,23 @@ func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 				return
 			}
 
-			if !d.Equal(s.prev) {
-				s.prev = *d
-				eventChan <- s.makeEvent(d)
+			if !s.concluded {
+				// Check isFinal and timeout which indicates a concluded event.
+				//TODO/QUESTION: After the concluded event there will never be another event. How do we handle this?
+				if d.IsFinal || s.timeoutElapsed() {
+					s.concluded = true
+					eventChan <- s.makeConcludedEvent(d)
+					return
+				}
+
+				// Check state change which indicates a registered event.
+				if !d.Equal(s.prevState) {
+					s.prevState = *d
+					eventChan <- s.makeRegisteredEvent(d)
+					return
+				}
+			} else {
+				errChan <- fmt.Errorf("subscription: Channel already concluded")
 				return
 			}
 
@@ -103,15 +121,37 @@ func (s *EventSubscription) Close() error {
 	return nil
 }
 
-func (s *EventSubscription) makeEvent(d *adj.StateReg) channel.AdjudicatorEvent {
+// makeRegisteredEvent returns a new registered event dependent on the given state.
+func (s *EventSubscription) makeRegisteredEvent(d *adj.StateReg) channel.AdjudicatorEvent {
+	s.timeout = s.convertStateTimeout(d)
 	state := d.State.CoreState()
 	cID := state.ID
 	v := state.Version
-	t := d.Timeout.Time()
-	timeout := makeTimeout(t, s.adjudicator.polling)
 
-	if d.IsFinal {
-		return channel.NewConcludedEvent(cID, timeout, v)
+	return channel.NewRegisteredEvent(cID, s.timeout, v, state, nil)
+}
+
+// makeConcludedEvent returns a new concluded or registered event dependent on the given state and timeout.
+func (s *EventSubscription) makeConcludedEvent(d *adj.StateReg) channel.AdjudicatorEvent {
+	s.timeout = s.convertStateTimeout(d)
+	state := d.State.CoreState()
+	cID := state.ID
+	v := state.Version
+
+	return channel.NewConcludedEvent(cID, s.timeout, v)
+}
+
+// timeoutElapsed evaluates once, if the last recorded timeout is concluded to implicitly indicate a concluded event.
+func (s *EventSubscription) timeoutElapsed() bool {
+	if s.timeout == nil {
+		return false
 	}
-	return channel.NewRegisteredEvent(cID, timeout, v, state, nil)
+
+	return s.timeout.IsElapsed(context.Background())
+}
+
+// convertStateTimeout converts the timeout to the client's system time.
+func (s *EventSubscription) convertStateTimeout(d *adj.StateReg) *Timeout {
+	timeoutDuration := d.Timeout.Time().Sub(d.State.Now.Time())
+	return makeTimeout(timeoutDuration, s.adjudicator.polling)
 }
