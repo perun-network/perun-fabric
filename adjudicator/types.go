@@ -18,6 +18,7 @@ type (
 
 	State struct {
 		ID       channel.ID    `json:"id"`
+		Now      Timestamp     `json:"now"`
 		Version  uint64        `json:"version"`
 		Balances []channel.Bal `json:"balances"`
 		IsFinal  bool          `json:"final"`
