@@ -102,7 +102,7 @@ func NewIdentity(org Org) (*identity.X509Identity, *wallet.Address, error) {
 	return pclient.NewIdentity(mspID(org), certPath(org))
 }
 
-// NewSign creates a function that generates a digital signature from a message digest using a private key.
+// NewAccountWithSigner creates a function that generates a digital signature from a message digest using a private key.
 func NewAccountWithSigner(org Org) (identity.Sign, *wallet.Account, error) {
 	path, err := keyPath(org)
 	if err != nil {
@@ -139,7 +139,7 @@ func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.
 	return gw, acc, err
 }
 
-// FatalErr prints msg followed by err and then exits the program immedately, if
+// FatalErr prints msg followed by err and then exits the program immediately, if
 // err != nil.
 func FatalErr(msg string, err error) {
 	if err != nil {
@@ -147,7 +147,7 @@ func FatalErr(msg string, err error) {
 	}
 }
 
-// FatalErr prints msg followed by err, if err != nil. The error err is then
+// FatalClientErr prints msg followed by err, if err != nil. The error err is then
 // parsed as a client error and its full details are also printed
 // The program is then exited immedately.
 func FatalClientErr(msg string, err error) {

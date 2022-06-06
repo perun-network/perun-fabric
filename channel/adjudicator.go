@@ -94,7 +94,6 @@ func (a *Adjudicator) Progress(ctx context.Context, req channel.ProgressReq) err
 }
 
 // Subscribe returns an AdjudicatorEvent subscription.
-//
 // The context should only be used to establish the subscription. The
 // framework will call Close on the subscription once the respective channel
 // controller shuts down.

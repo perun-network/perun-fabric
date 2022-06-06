@@ -26,11 +26,11 @@ import (
 
 // EventSubscription provides methods for consuming channel events.
 type EventSubscription struct {
-	adjudicator *Adjudicator  // binding is the referenced adjudicator instance.
+	adjudicator *Adjudicator  // adjudicator is the referenced adjudicator instance.
 	channelID   channel.ID    // channelID is the channel identifier
 	prevState   adj.StateReg  // prevState is the previous channel state
 	timeout     *Timeout      // timeout is the current Event timeout
-	concluded   bool          // indicates if a concluded event was created
+	concluded   bool          // concluded indicates if a concluded event was created
 	closed      chan struct{} // closed signals if the sub is closed
 	err         chan error    // err forwards errors during event parsing
 	once        sync.Once     // once used to close channels
@@ -81,7 +81,7 @@ func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 					return
 				}
 			} else {
-				errChan <- fmt.Errorf("subscription: Channel already concluded")
+				errChan <- fmt.Errorf("subscription: channel already concluded")
 				return
 			}
 
@@ -109,7 +109,7 @@ func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 func (s *EventSubscription) Err() error {
 	select {
 	case <-s.closed:
-		return nil
+		return fmt.Errorf("subscription: closed")
 	default:
 		return <-s.err
 	}
@@ -146,7 +146,6 @@ func (s *EventSubscription) timeoutElapsed() bool {
 	if s.timeout == nil {
 		return false
 	}
-
 	return s.timeout.IsElapsed(context.Background())
 }
 
