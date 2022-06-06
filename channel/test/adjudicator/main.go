@@ -42,7 +42,7 @@ func TestAdjudicatorWithSubscriptionCollaborative() {
 	setup := adjtest.NewSetup(rng,
 		adjtest.WithAccounts(adjs[0].Account, adjs[1].Account),
 		adjtest.WithBalances(big.NewInt(4000), big.NewInt(1000)))
-	ch, id := setup.SignedChannel(), setup.State.ID
+	id := setup.State.ID
 
 	log.Printf("Depositing channel ...")
 	for i, part := range setup.Parts {
@@ -66,7 +66,7 @@ func TestAdjudicatorWithSubscriptionCollaborative() {
 	fmt.Println("")
 
 	setup.State.IsFinal = true
-	ch = setup.SignedChannel()
+	ch := setup.SignedChannel()
 	req := pchannel.AdjudicatorReq{
 		Params: ch.Params.CoreParams(),
 		Tx: pchannel.Transaction{
