@@ -70,7 +70,7 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 	// Dispute case
 	if !reg.IsFinal {
 		duration := reg.Timeout.Time().Sub(reg.Now.Time())
-		timeout := makeTimeout(duration, a.polling)
+		timeout := MakeTimeout(duration, a.polling)
 
 		err := timeout.Wait(ctx)
 		if err != nil {

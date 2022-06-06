@@ -25,11 +25,12 @@ type Timeout struct {
 	polling time.Duration
 }
 
-func makeTimeout(duration time.Duration, polling time.Duration) *Timeout {
+// MakeTimeout generates a timeout based on the given duration and the current time.
+func MakeTimeout(duration time.Duration, polling time.Duration) *Timeout {
 	t := time.Now().Add(duration)
 
 	return &Timeout{
-		timeout: t,       // t is the timeout
+		timeout: t,       // timeout is the time representing the timeout
 		polling: polling, // polling is used to periodically check if the timeout is concluded
 	}
 }

@@ -152,5 +152,5 @@ func (s *EventSubscription) timeoutElapsed() bool {
 // convertStateTimeout converts the timeout to the client's system time.
 func (s *EventSubscription) convertStateTimeout(d *adj.StateReg) *Timeout {
 	timeoutDuration := d.Timeout.Time().Sub(d.State.Now.Time())
-	return makeTimeout(timeoutDuration, s.adjudicator.polling)
+	return MakeTimeout(timeoutDuration, s.adjudicator.polling)
 }
