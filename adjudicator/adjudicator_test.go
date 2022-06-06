@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
 	"polycry.pt/poly-go/test"
 
@@ -66,7 +65,7 @@ func TestAdjudicator(t *testing.T) {
 
 		adjsr, err := s.Adj.StateReg(s.State.ID)
 		require.NoError(err)
-		require.Zero(deep.Equal(sr, adjsr))
+		require.True(sr.Equal(*adjsr))
 	})
 
 	t.Run("Register-idempotence", func(t *testing.T) {
@@ -80,7 +79,7 @@ func TestAdjudicator(t *testing.T) {
 
 		adjsr, err := s.Adj.StateReg(s.State.ID)
 		require.NoError(err)
-		require.Zero(deep.Equal(sr, adjsr))
+		require.True(sr.Equal(*adjsr))
 	})
 
 	t.Run("Register-refute", func(t *testing.T) {
@@ -92,16 +91,14 @@ func TestAdjudicator(t *testing.T) {
 
 		// increment state's version
 		s.State.Version = 5
-		// forward clock close to dispute timeout
-		s.Ledger.AdvanceNow(s.Params.ChallengeDuration)
 
-		ch1 := s.SignedChannel()
 		sr1 := s.StateReg()
+		ch1 := s.SignedChannel()
 		require.NoError(s.Adj.Register(ch1))
 
 		adjsr1, err := s.Adj.StateReg(s.State.ID)
 		require.NoError(err)
-		require.Zero(deep.Equal(sr1, adjsr1))
+		require.True(sr1.Equal(*adjsr1))
 	})
 
 	t.Run("Register-timeout", func(t *testing.T) {
@@ -126,6 +123,6 @@ func TestAdjudicator(t *testing.T) {
 
 		adjsr0, err := s.Adj.StateReg(s.State.ID)
 		require.NoError(err)
-		require.Zero(deep.Equal(sr0, adjsr0))
+		require.True(sr0.Equal(*adjsr0))
 	})
 }
