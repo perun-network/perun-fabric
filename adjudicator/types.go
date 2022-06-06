@@ -100,6 +100,7 @@ func (s State) CoreState() *channel.State {
 	return &channel.State{
 		ID:      s.ID,
 		Version: s.Version,
+		IsFinal: s.IsFinal,
 		App:     channel.NoApp(),
 		Data:    channel.NoData(),
 		Allocation: channel.Allocation{

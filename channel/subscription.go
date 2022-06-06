@@ -109,7 +109,7 @@ func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 func (s *EventSubscription) Err() error {
 	select {
 	case <-s.closed:
-		return fmt.Errorf("subscription: closed")
+		return nil // TODO/QUESTION: Discuss nil
 	default:
 		return <-s.err
 	}
