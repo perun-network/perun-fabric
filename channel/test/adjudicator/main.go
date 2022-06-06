@@ -5,12 +5,12 @@ import (
 	"flag"
 	"fmt"
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
-	"github.com/perun-network/perun-fabric/tests"
+	"github.com/perun-network/perun-fabric/channel/test"
 	"log"
 	"math/big"
 	"math/rand"
 	pchannel "perun.network/go-perun/channel"
-	"polycry.pt/poly-go/test"
+	ptest "polycry.pt/poly-go/test"
 	"time"
 )
 
@@ -24,15 +24,15 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	var adjs []*AdjudicatorSession
+	var adjs []*test.AdjudicatorSession
 	for i := uint(1); i <= 2; i++ {
-		as, err := NewAdjudicatorSession(tests.OrgNum(i))
-		tests.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
+		as, err := test.NewAdjudicatorSession(test.OrgNum(i), *chainCode)
+		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)
 	}
 
-	rng := test.Prng(test.NameStr("FabricAdjudicator"))
+	rng := ptest.Prng(ptest.NameStr("FabricAdjudicator"))
 	setup := adjtest.NewSetup(rng,
 		adjtest.WithAccounts(adjs[0].Account, adjs[1].Account),
 		adjtest.WithBalances(big.NewInt(4000), big.NewInt(1000)))
@@ -41,12 +41,12 @@ func main() {
 	log.Printf("Depositing channel ...")
 	for i, part := range setup.Parts {
 		bal := setup.State.Balances[i]
-		tests.FatalClientErr("sending Deposit tx", adjs[i].Binding.Deposit(id, bal))
+		test.FatalClientErr("sending Deposit tx", adjs[i].Binding.Deposit(id, bal))
 
 		holding, err := adjs[i].Binding.Holding(id, part)
-		tests.FatalClientErr("querying holding", err)
+		test.FatalClientErr("querying holding", err)
 		log.Printf("Queried holding[%d]: %v", i, holding)
-		tests.RequireEqual(bal, holding, "Holding")
+		test.RequireEqual(bal, holding, "Holding")
 	}
 	log.Printf("Depositing channel - Successful")
 	fmt.Println("")
@@ -55,7 +55,7 @@ func main() {
 	// Adjudicator: Subscribe to events.
 	log.Println("Subscription: Init ...")
 	eventSub, err := adjs[0].Adjudicator.Subscribe(ctx, id)
-	tests.FatalErr("subscribe", err)
+	test.FatalErr("subscribe", err)
 	log.Println("Subscription: Init - Successful")
 	fmt.Println("")
 
@@ -70,7 +70,7 @@ func main() {
 			},
 		}
 		err := adjs[0].Adjudicator.Register(ctx, req, subChannels)
-		tests.FatalErr("register version 0", err)
+		test.FatalErr("register version 0", err)
 	}
 	log.Println("Register: Version 0 - Successful")
 	fmt.Println("")
@@ -79,10 +79,10 @@ func main() {
 	{
 		log.Println("Subscription: Check RegisteredEvent ...")
 		e, ok := eventSub.Next().(*pchannel.RegisteredEvent)
-		tests.RequireEqual(true, ok, "registered")
-		tests.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
-		tests.RequireEqual(e.Version() == ch.State.Version, true, "version")
-		tests.RequireEqual(e.State.Equal(ch.State.CoreState()) == nil, true, "equal state")
+		test.RequireEqual(true, ok, "registered")
+		test.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
+		test.RequireEqual(e.Version() == ch.State.Version, true, "version")
+		test.RequireEqual(e.State.Equal(ch.State.CoreState()) == nil, true, "equal state")
 		log.Println("Subscription: Check RegisteredEvent - Successful")
 		fmt.Println("")
 	}
@@ -102,7 +102,7 @@ func main() {
 			},
 		}
 		err = adjs[1].Adjudicator.Register(ctx, req, subChannels)
-		tests.FatalClientErr("register version 1", err)
+		test.FatalClientErr("register version 1", err)
 	}
 	log.Println("Register: Version 1 - Successful")
 	fmt.Println("")
@@ -111,10 +111,10 @@ func main() {
 	{
 		log.Println("Subscription: Check RegisteredEvent ...")
 		e, ok := eventSub.Next().(*pchannel.RegisteredEvent)
-		tests.RequireEqual(true, ok, "registered")
-		tests.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
-		tests.RequireEqual(e.Version() == ch.State.CoreState().Version, true, "version")
-		tests.RequireEqual(e.State.Equal(ch.State.CoreState()) == nil, true, "equal state")
+		test.RequireEqual(true, ok, "registered")
+		test.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
+		test.RequireEqual(e.Version() == ch.State.CoreState().Version, true, "version")
+		test.RequireEqual(e.State.Equal(ch.State.CoreState()) == nil, true, "equal state")
 		log.Println("Subscription: Check RegisteredEvent - Successful")
 		fmt.Println("")
 	}
@@ -123,9 +123,9 @@ func main() {
 	for i, part := range setup.Parts {
 		bal := setup.State.Balances[i]
 		holding, err := adjs[i].Binding.Holding(id, part)
-		tests.FatalClientErr("querying holding", err)
+		test.FatalClientErr("querying holding", err)
 		log.Printf("Queried holding[%d]: %v", i, holding)
-		tests.RequireEqual(bal, holding, "Holding")
+		test.RequireEqual(bal, holding, "Holding")
 	}
 	log.Println("Check holdings - Successful")
 	fmt.Println("")
@@ -148,7 +148,7 @@ func main() {
 			req.Acc = adjs[i].Account
 			log.Printf("Withdraw: Client %d ... (takes some time because of dispute)", req.Idx)
 			err = adjs[i].Adjudicator.Withdraw(ctx, req, MakeStateMapFromSignedStates(subChannels...))
-			tests.FatalClientErr("withdraw", err)
+			test.FatalClientErr("withdraw", err)
 		}
 		log.Println("Withdraw - Successful")
 		fmt.Println("")
@@ -158,11 +158,11 @@ func main() {
 	{
 		log.Println("Subscription: Check ConcludedEvent ...")
 		e, ok := eventSub.Next().(*pchannel.ConcludedEvent)
-		tests.RequireEqual(true, ok, "concluded")
-		tests.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
-		tests.RequireEqual(e.Version() == ch.State.CoreState().Version, true, "version")
+		test.RequireEqual(true, ok, "concluded")
+		test.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
+		test.RequireEqual(e.Version() == ch.State.CoreState().Version, true, "version")
 		err = e.Timeout().Wait(ctx)
-		tests.FatalErr("concluded: wait", err)
+		test.FatalErr("concluded: wait", err)
 		log.Println("Subscription: Check ConcludedEvent - Successful")
 		fmt.Println("")
 	}
@@ -170,9 +170,9 @@ func main() {
 	// Subscription: Close.
 	{
 		err := eventSub.Close()
-		tests.FatalErr("close", err)
+		test.FatalErr("close", err)
 		err = eventSub.Err()
-		tests.FatalErr("err", err)
+		test.FatalErr("err", err)
 	}
 }
 

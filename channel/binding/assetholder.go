@@ -8,7 +8,6 @@ import (
 	"perun.network/go-perun/wallet"
 
 	pkgjson "github.com/perun-network/perun-fabric/pkg/json"
-	"github.com/perun-network/perun-fabric/tests"
 )
 
 type AssetHolder struct {
@@ -33,7 +32,7 @@ func (ah *AssetHolder) Holding(id channel.ID, addr wallet.Address) (*big.Int, er
 	if err != nil {
 		return nil, err
 	}
-	return tests.BigIntWithError(ah.Contract.SubmitTransaction(txHolding, args...))
+	return bigIntWithError(ah.Contract.SubmitTransaction(txHolding, args...))
 }
 
 func (ah *AssetHolder) TotalHolding(id channel.ID, addrs []wallet.Address) (*big.Int, error) {
@@ -41,7 +40,7 @@ func (ah *AssetHolder) TotalHolding(id channel.ID, addrs []wallet.Address) (*big
 	if err != nil {
 		return nil, err
 	}
-	return tests.BigIntWithError(ah.Contract.SubmitTransaction(txTotalHolding, args...))
+	return bigIntWithError(ah.Contract.SubmitTransaction(txTotalHolding, args...))
 }
 
 func (ah *AssetHolder) Withdraw(id channel.ID) (*big.Int, error) {
@@ -49,5 +48,5 @@ func (ah *AssetHolder) Withdraw(id channel.ID) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	return tests.BigIntWithError(ah.Contract.SubmitTransaction(txWithdraw, args...))
+	return bigIntWithError(ah.Contract.SubmitTransaction(txWithdraw, args...))
 }

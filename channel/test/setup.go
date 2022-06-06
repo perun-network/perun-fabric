@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package tests
+package test
 
 import (
 	"fmt"
+	"github.com/go-test/deep"
 	"io/ioutil"
 	"log"
 	"os"
@@ -152,5 +153,11 @@ func FatalErr(msg string, err error) {
 func FatalClientErr(msg string, err error) {
 	if err != nil {
 		log.Fatalf("Error %s: [%T] %+v\n%s", msg, err, err, pclient.ParseClientErr(err))
+	}
+}
+
+func RequireEqual(exp, act interface{}, msg string) {
+	if diff := deep.Equal(exp, act); diff != nil {
+		log.Fatalf("%s: not equal:\n%+v != %+v\nDiff:\n%v", msg, exp, act, diff)
 	}
 }
