@@ -16,14 +16,15 @@ import (
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 )
 
-var chainCode = flag.String("chaincode", "adjudicator", "Adjudicator chaincode name")
+var adjudicator = flag.String("adjudicator", "adjudicator-12127", "AssetHolder chaincode name")
+var assetholder = flag.String("assetholder", "assetholder-12127", "AssetHolder chaincode name")
 
 func main() {
 	flag.Parse()
 
-	var adjs []*test.AdjudicatorSession
+	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := test.NewAdjudicatorSession(test.OrgNum(i), *chainCode)
+		as, err := test.NewTestSession(test.OrgNum(i), *adjudicator, *assetholder)
 		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)

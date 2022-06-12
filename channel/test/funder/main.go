@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var chainCode = flag.String("chaincode", "assetholder", "AssetHolder chaincode name")
+var assetholder = flag.String("assetholder", "assetholder-8195", "AssetHolder chaincode name")
 var org = flag.Uint("org", 1, "Organization# of user to perform txs as (1 or 2)")
 
 const testTimeout = 10 * time.Second
@@ -34,7 +34,7 @@ func main() {
 	defer gateway.Close()
 
 	network := gateway.GetNetwork(test.ChannelName)
-	funder := channel.NewFunder(network, *chainCode)
+	funder := channel.NewFunder(network, *assetholder)
 
 	rng := ptest.Prng(ptest.NameStr("FabricFunder"))
 	addr := acc.Address()

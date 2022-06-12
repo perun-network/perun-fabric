@@ -14,7 +14,8 @@ import (
 	"time"
 )
 
-var chainCode = flag.String("chaincode", "adjudicator", "AssetHolder chaincode name")
+var adjudicator = flag.String("adjudicator", "adjudicator-31928", "Adjudicator chaincode name")
+var assetholder = flag.String("assetholder", "assetholder-31928", "AssetHolder chaincode name")
 
 const testTimeout = 120 * time.Second
 
@@ -30,9 +31,9 @@ func TestAdjudicatorWithSubscriptionCollaborative() {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	var adjs []*test.AdjudicatorSession
+	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := test.NewAdjudicatorSession(test.OrgNum(i), *chainCode)
+		as, err := test.NewTestSession(test.OrgNum(i), *adjudicator, *assetholder)
 		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)
@@ -129,9 +130,9 @@ func TestAdjudicatorWithSubscriptionDispute() {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
-	var adjs []*test.AdjudicatorSession
+	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := test.NewAdjudicatorSession(test.OrgNum(i), *chainCode)
+		as, err := test.NewTestSession(test.OrgNum(i), *adjudicator, *assetholder)
 		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)
