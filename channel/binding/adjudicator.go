@@ -63,11 +63,10 @@ func (a *Adjudicator) Register(ch *adj.SignedChannel) error {
 
 func (a *Adjudicator) StateReg(id channel.ID) (*adj.StateReg, error) {
 	arg, err := json.Marshal(id)
-	strarg := string(arg)
 	if err != nil {
 		return nil, err
 	}
-	regJson, err := a.Contract.SubmitTransaction(txStateReg, strarg)
+	regJson, err := a.Contract.SubmitTransaction(txStateReg, string(arg))
 	if err != nil {
 		return nil, err
 	}

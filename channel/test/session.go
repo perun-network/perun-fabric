@@ -37,7 +37,7 @@ func NewTestSession(org Org, adjudicator string, assetholder string) (_ *Session
 	return &Session{
 		Adjudicator: channel.NewAdjudicator(network, adjudicator),
 		Binding:     binding.NewAdjudicatorBinding(network, adjudicator),
-		Funder:      channel.NewFunder(network, assetholder),
+		Funder:      channel.NewFunder(network, adjudicator),
 		Account:     acc,
 		conn:        clientConn,
 		gw:          gateway,

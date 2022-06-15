@@ -14,7 +14,7 @@ const (
 )
 
 type Funder struct {
-	binding *binding.AssetHolder // binding gives access to the AssetHolder contract.
+	binding *binding.Adjudicator // binding gives access to the AssetHolder contract.
 	polling time.Duration        // The polling interval to wait for complete funding.
 	m       sync.Mutex           // m prevents sending parallel transactions.
 }
@@ -30,7 +30,7 @@ func WithPollingInterval(d time.Duration) FunderOpt {
 // NewFunder returns a new Funder.
 func NewFunder(network *client.Network, chaincode string, opts ...FunderOpt) *Funder {
 	f := &Funder{
-		binding: binding.NewAssetHolderBinding(network, chaincode),
+		binding: binding.NewAdjudicatorBinding(network, chaincode),
 		polling: defaultFunderPollingInterval,
 	}
 	for _, opt := range opts {

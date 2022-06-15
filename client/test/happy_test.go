@@ -39,8 +39,8 @@ const (
 	bobHolding   = 100000000
 )
 
-var adjudicator = flag.String("adjudicator", "adjudicator-23465", "Adjudicator chaincode name")
-var assetholder = flag.String("assetholder", "assetholder-23465", "AssetHolder chaincode name")
+var adjudicator = flag.String("adjudicator", "adjudicator-29812", "Adjudicator chaincode name")
+var assetholder = flag.String("assetholder", "assetholder-29812", "AssetHolder chaincode name")
 
 func TestHappyAliceBob(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
@@ -68,13 +68,11 @@ func TestHappyAliceBob(t *testing.T) {
 	bus := wire.NewLocalBus()
 
 	for i := 0; i < len(setup); i++ {
-		acc := adjs[i].Account
-		//wallet := wallet.NewWallet(acc)
 		watcher, _ := local.NewWatcher(adjs[i].Adjudicator)
 
 		setup[i] = clienttest.RoleSetup{
 			Name:              name[i],
-			Identity:          acc,
+			Identity:          adjs[i].Account,
 			Bus:               bus,
 			Funder:            adjs[i].Funder,
 			Adjudicator:       adjs[i].Adjudicator,
@@ -89,8 +87,6 @@ func TestHappyAliceBob(t *testing.T) {
 	role[A] = clienttest.NewAlice(t, setup[A])
 	role[B] = clienttest.NewBob(t, setup[B])
 
-	fmt.Printf("Client 0: %s, Client 1: %s \n", setup[A].Identity.Address().String(), setup[B].Identity.Address().String())
-
 	execConfig := &clienttest.AliceBobExecConfig{
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
 			[2]wire.Address{setup[A].Identity.Address(), setup[B].Identity.Address()},
@@ -99,7 +95,7 @@ func TestHappyAliceBob(t *testing.T) {
 			pclient.WithoutApp(),
 		),
 		NumPayments: [2]int{5, 0},
-		TxAmounts:   [2]*big.Int{big.NewInt(20), big.NewInt(0)},
+		TxAmounts:   [2]*big.Int{big.NewInt(50), big.NewInt(0)},
 	}
 
 	// Amount that will be send from Alice to Bob.
