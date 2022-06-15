@@ -16,7 +16,7 @@ import (
 	_ "github.com/perun-network/perun-fabric" // init backend
 )
 
-var assetholder = flag.String("assetholder", "assetholder-8195", "AssetHolder chaincode name")
+var assetholder = flag.String("assetholder", "assetholder-22618", "AssetHolder chaincode name")
 var org = flag.Uint("org", 1, "Organization# of user to perform txs as (1 or 2)")
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 	id, addr := chtest.NewRandomChannelID(rng), acc.Address()
 	holding := big.NewInt(rng.Int63())
 	log.Printf("Depositing: funding id: (%x, %v), amount: %v", id, addr, holding)
-	test.FatalClientErr("sending Deposit tx", ah.Deposit(id, holding))
+	test.FatalClientErr("sending Deposit tx", ah.Deposit(id, addr, holding))
 
 	holding1, err := ah.Holding(id, addr)
 	test.FatalClientErr("querying holding", err)
@@ -51,7 +51,7 @@ func main() {
 	log.Printf("Querying total holding: %v", total)
 	test.RequireEqual(holding, total, "Holding")
 
-	withdrawn, err := ah.Withdraw(id)
+	withdrawn, err := ah.Withdraw(id, addr)
 	test.FatalClientErr("withdrawing", err)
 	log.Printf("Withdrawing: %v", withdrawn)
 	test.RequireEqual(holding, withdrawn, "Withdraw")

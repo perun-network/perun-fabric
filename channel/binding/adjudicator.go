@@ -27,8 +27,8 @@ func NewAdjudicatorBinding(network *client.Network, chainCode string) *Adjudicat
 	return &Adjudicator{Contract: network.GetContract(chainCode)}
 }
 
-func (a *Adjudicator) Deposit(id channel.ID, amount *big.Int) error {
-	args, err := pkgjson.MultiMarshal(id, amount)
+func (a *Adjudicator) Deposit(id channel.ID, part wallet.Address, amount *big.Int) error {
+	args, err := pkgjson.MultiMarshal(id, part, amount)
 	if err != nil {
 		return err
 	}
@@ -74,8 +74,8 @@ func (a *Adjudicator) StateReg(id channel.ID) (*adj.StateReg, error) {
 	return &reg, json.Unmarshal(regJson, &reg)
 }
 
-func (a *Adjudicator) Withdraw(id channel.ID) (*big.Int, error) {
-	args, err := pkgjson.MultiMarshal(id)
+func (a *Adjudicator) Withdraw(id channel.ID, part wallet.Address) (*big.Int, error) {
+	args, err := pkgjson.MultiMarshal(id, part)
 	if err != nil {
 		return nil, err
 	}

@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
+	"github.com/hyperledger/fabric-protos-go/peer"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/perun-network/perun-fabric/channel/binding"
+	fabclient "github.com/perun-network/perun-fabric/client"
 	"perun.network/go-perun/channel"
+	"strings"
 	"time"
 )
 
@@ -61,25 +64,34 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 	if len(subStates) > 0 {
 		return fmt.Errorf("subchannels not supported")
 	}
+	id := req.Tx.ID
 
-	reg, err := a.binding.StateReg(req.Tx.ID)
-	if err != nil {
-		return err
-	}
+	// For withdrawing there must be at least one registered state.
+	if req.Tx.IsFinal {
+		// Ensure there is a registered state.
+		err := a.ensureRegistered(ctx, req, nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Dispute case: There must be a registered state.
+		reg, err := a.binding.StateReg(id)
+		if err != nil {
+			return err
+		}
 
-	// Dispute case
-	if !reg.IsFinal {
 		duration := reg.Timeout.Time().Sub(reg.Now.Time())
 		timeout := MakeTimeout(duration, a.polling)
 
-		err := timeout.Wait(ctx)
+		err = timeout.Wait(ctx)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Concluded (or waited for challenge duration in case of dispute)
-	_, err = a.binding.Withdraw(req.Tx.ID)
+	part := req.Params.Parts[req.Idx]
+	_, err := a.binding.Withdraw(id, part)
 	if err != nil {
 		return err
 	}
@@ -103,4 +115,23 @@ func (a *Adjudicator) Subscribe(ctx context.Context, ch channel.ID) (channel.Adj
 		return nil, fmt.Errorf("subscribe: %w", err)
 	}
 	return sub, nil
+}
+
+func (a *Adjudicator) ensureRegistered(ctx context.Context, req channel.AdjudicatorReq, subChannels []channel.SignedState) error {
+	err := a.Register(ctx, req, subChannels)
+
+	// In this case, the other party is registering simultaneously and got the lock on the contact.
+	if e, ok := err.(*client.CommitError); ok && e.Code == peer.TxValidationCode_MVCC_READ_CONFLICT {
+		return nil
+	}
+
+	// In this case, the other party already registered before.
+	if e := fabclient.ParseClientErr(err); strings.Contains(e, "channel underfunded") { // TODO: Better on to off chain errors
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -107,17 +107,12 @@ func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 // Err returns the error status of the subscription. After Next returns nil,
 // Err should be checked for an error.
 func (s *EventSubscription) Err() error {
-	select {
-	case <-s.closed:
-		return nil // TODO/QUESTION: Discuss nil
-	default:
-		return <-s.err
-	}
+	return <-s.err
 }
 
 // Close closes the subscription.
 func (s *EventSubscription) Close() error {
-	s.once.Do(func() { close(s.closed) })
+	s.once.Do(func() { close(s.closed); close(s.err) })
 	return nil
 }
 

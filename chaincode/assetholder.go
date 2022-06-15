@@ -21,12 +21,12 @@ func (AssetHolder) contract(ctx contractapi.TransactionContextInterface) *adj.As
 }
 
 func (h *AssetHolder) Deposit(ctx contractapi.TransactionContextInterface,
-	id channel.ID, amountStr string) error {
+	id channel.ID, partStr string, amountStr string) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
-	part, err := AddressFromTxCtx(ctx)
+	part, err := UnmarshalAddress(partStr)
 	if err != nil {
 		return err
 	}
@@ -52,8 +52,8 @@ func (h *AssetHolder) TotalHolding(ctx contractapi.TransactionContextInterface,
 }
 
 func (h *AssetHolder) Withdraw(ctx contractapi.TransactionContextInterface,
-	id channel.ID) (string, error) {
-	part, err := AddressFromTxCtx(ctx)
+	id channel.ID, partStr string) (string, error) {
+	part, err := UnmarshalAddress(partStr)
 	if err != nil {
 		return "", err
 	}
