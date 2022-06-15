@@ -62,7 +62,8 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 		return fmt.Errorf("subchannels not supported")
 	}
 
-	reg, err := a.binding.StateReg(req.Tx.ID)
+	id := req.Tx.ID
+	reg, err := a.binding.StateReg(id)
 	if err != nil {
 		return err
 	}
@@ -79,7 +80,8 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 	}
 
 	// Concluded (or waited for challenge duration in case of dispute)
-	_, err = a.binding.Withdraw(req.Tx.ID)
+	part := req.Params.Parts[req.Idx]
+	_, err = a.binding.Withdraw(id, part)
 	if err != nil {
 		return err
 	}

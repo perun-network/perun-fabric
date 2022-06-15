@@ -6,6 +6,7 @@ import (
 	"fmt"
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 	"github.com/perun-network/perun-fabric/channel/test"
+	"github.com/perun-network/perun-fabric/wallet"
 	"log"
 	"math/big"
 	"math/rand"
@@ -14,13 +15,12 @@ import (
 	"time"
 )
 
-var adjudicator = flag.String("adjudicator", "adjudicator-31928", "Adjudicator chaincode name")
-var assetholder = flag.String("assetholder", "assetholder-31928", "AssetHolder chaincode name")
+var adjudicator = flag.String("adjudicator", "adjudicator-23465", "Adjudicator chaincode name")
+var assetholder = flag.String("assetholder", "assetholder-23465", "AssetHolder chaincode name")
 
 const testTimeout = 120 * time.Second
 
 func main() {
-	flag.Parse()
 	TestAdjudicatorWithSubscriptionCollaborative()
 	TestAdjudicatorWithSubscriptionDispute()
 }
@@ -41,14 +41,14 @@ func TestAdjudicatorWithSubscriptionCollaborative() {
 
 	rng := ptest.Prng(ptest.NameStr("TestAdjudicatorWithSubscriptionCollaborative"))
 	setup := adjtest.NewSetup(rng,
-		adjtest.WithAccounts(adjs[0].Account, adjs[1].Account),
+		adjtest.WithAccounts(wallet.NewRandomAccount(rng), wallet.NewRandomAccount(rng)),
 		adjtest.WithBalances(big.NewInt(4000), big.NewInt(1000)))
 	id := setup.State.ID
 
 	log.Printf("Depositing channel ...")
 	for i, part := range setup.Parts {
 		bal := setup.State.Balances[i]
-		test.FatalClientErr("sending Deposit tx", adjs[i].Binding.Deposit(id, bal))
+		test.FatalClientErr("sending Deposit tx", adjs[i].Binding.Deposit(id, part, bal))
 
 		holding, err := adjs[i].Binding.Holding(id, part)
 		test.FatalClientErr("querying holding", err)
@@ -147,7 +147,7 @@ func TestAdjudicatorWithSubscriptionDispute() {
 	log.Printf("Depositing channel ...")
 	for i, part := range setup.Parts {
 		bal := setup.State.Balances[i]
-		test.FatalClientErr("sending Deposit tx", adjs[i].Binding.Deposit(id, bal))
+		test.FatalClientErr("sending Deposit tx", adjs[i].Binding.Deposit(id, part, bal))
 
 		holding, err := adjs[i].Binding.Holding(id, part)
 		test.FatalClientErr("querying holding", err)

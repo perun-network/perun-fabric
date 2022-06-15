@@ -16,8 +16,8 @@ import (
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 )
 
-var adjudicator = flag.String("adjudicator", "adjudicator-12127", "AssetHolder chaincode name")
-var assetholder = flag.String("assetholder", "assetholder-12127", "AssetHolder chaincode name")
+var adjudicator = flag.String("adjudicator", "adjudicator-22618", "AssetHolder chaincode name")
+var assetholder = flag.String("assetholder", "assetholder-22618", "AssetHolder chaincode name")
 
 func main() {
 	flag.Parse()
@@ -38,7 +38,7 @@ func main() {
 	log.Printf("Depositing channel: %+v", ch)
 	for i, part := range setup.Parts {
 		bal := setup.State.Balances[i]
-		test.FatalClientErr("sending Deposit tx", adjs[i].Binding.Deposit(id, bal))
+		test.FatalClientErr("sending Deposit tx", adjs[i].Binding.Deposit(id, part, bal))
 
 		holding, err := adjs[i].Binding.Holding(id, part)
 		test.FatalClientErr("querying holding", err)
@@ -62,7 +62,7 @@ func main() {
 	test.RequireEqual(regfinal.CoreState(), regfinal0.CoreState(), "final StateReg")
 
 	for i := range setup.Parts {
-		withdrawn, err := adjs[i].Binding.Withdraw(id)
+		withdrawn, err := adjs[i].Binding.Withdraw(id, setup.Parts[i])
 		test.FatalClientErr("withdrawing", err)
 		log.Printf("Withdrawn[%d]: %v", i, withdrawn)
 		test.RequireEqual(setup.State.Balances[i], withdrawn, "Withdraw")

@@ -22,12 +22,12 @@ func (Adjudicator) contract(ctx contractapi.TransactionContextInterface) *adj.Ad
 }
 
 func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
-	id channel.ID, amountStr string) error {
+	id channel.ID, partStr string, amountStr string) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
-	part, err := AddressFromTxCtx(ctx)
+	part, err := UnmarshalAddress(partStr)
 	if err != nil {
 		return err
 	}
@@ -72,8 +72,8 @@ func (a *Adjudicator) StateReg(ctx contractapi.TransactionContextInterface,
 }
 
 func (a *Adjudicator) Withdraw(ctx contractapi.TransactionContextInterface,
-	id channel.ID) (string, error) {
-	part, err := AddressFromTxCtx(ctx)
+	id channel.ID, partStr string) (string, error) {
+	part, err := UnmarshalAddress(partStr)
 	if err != nil {
 		return "", err
 	}

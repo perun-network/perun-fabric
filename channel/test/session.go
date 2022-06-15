@@ -12,9 +12,9 @@ import (
 )
 
 type Session struct {
-	Adjudicator channel.Adjudicator
-	Binding     binding.Adjudicator
-	Funder      channel.Funder
+	Adjudicator *channel.Adjudicator
+	Binding     *binding.Adjudicator
+	Funder      *channel.Funder
 	Account     *wallet.Account
 	conn        *grpc.ClientConn
 	gw          *client.Gateway
@@ -35,9 +35,9 @@ func NewTestSession(org Org, adjudicator string, assetholder string) (_ *Session
 
 	network := gateway.GetNetwork(ChannelName)
 	return &Session{
-		Adjudicator: *channel.NewAdjudicator(network, adjudicator),
-		Binding:     *binding.NewAdjudicatorBinding(network, adjudicator),
-		Funder:      *channel.NewFunder(network, assetholder),
+		Adjudicator: channel.NewAdjudicator(network, adjudicator),
+		Binding:     binding.NewAdjudicatorBinding(network, adjudicator),
+		Funder:      channel.NewFunder(network, assetholder),
 		Account:     acc,
 		conn:        clientConn,
 		gw:          gateway,
