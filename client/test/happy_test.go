@@ -36,7 +36,6 @@ const (
 	happyTestTimeout = 60 * time.Second
 	aliceHolding     = 1000
 	bobHolding       = 1000
-	chaincode        = "adjudicator"
 )
 
 func TestHappyAliceBob(t *testing.T) {
@@ -55,7 +54,7 @@ func TestHappyAliceBob(t *testing.T) {
 
 	var adjs []*chtest.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := chtest.NewTestSession(chtest.OrgNum(i), chaincode)
+		as, err := chtest.NewTestSession(chtest.OrgNum(i), chtest.AdjudicatorName)
 		chtest.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)

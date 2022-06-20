@@ -12,13 +12,14 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package main
+package assetholder_test
 
 import (
 	"github.com/perun-network/perun-fabric/channel/binding"
 	"github.com/perun-network/perun-fabric/channel/test"
 	"log"
 	"math/big"
+	"testing"
 
 	chtest "perun.network/go-perun/channel/test"
 	"perun.network/go-perun/wallet"
@@ -27,11 +28,7 @@ import (
 	_ "github.com/perun-network/perun-fabric" // init backend
 )
 
-const (
-	chaincode = "assetholder"
-)
-
-func main() {
+func TestAssetholder(t *testing.T) {
 	org := test.OrgNum(1)
 	clientConn, err := test.NewGrpcConnection(org)
 	test.FatalErr("creating client conn", err)
@@ -43,7 +40,7 @@ func main() {
 	defer gateway.Close()
 
 	network := gateway.GetNetwork(test.ChannelName)
-	ah := binding.NewAssetHolderBinding(network, chaincode)
+	ah := binding.NewAssetHolderBinding(network, test.AssetholderName)
 
 	rng := ptest.Prng(ptest.NameStr("FabricAssetHolder"))
 	id, addr := chtest.NewRandomChannelID(rng), acc.Address()

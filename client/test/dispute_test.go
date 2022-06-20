@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	disputeTestTimeout = 60 * time.Second
+	disputeTestTimeout = 120 * time.Second
 	malloryHolding     = 1000
 	carolHolding       = 1000
 )
@@ -55,7 +55,7 @@ func TestDisputeMalloryCarol(t *testing.T) {
 
 	var adjs []*chtest.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := chtest.NewTestSession(chtest.OrgNum(i), chaincode)
+		as, err := chtest.NewTestSession(chtest.OrgNum(i), chtest.AdjudicatorName)
 		chtest.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)

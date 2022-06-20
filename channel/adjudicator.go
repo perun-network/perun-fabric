@@ -114,7 +114,6 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 	if amount.Cmp(big.NewInt(0)) == 0 {
 		return fmt.Errorf("withdrawing zero") // Error expected if zero funds are withdrawn.
 	}
-
 	if err != nil {
 		return err
 	}
@@ -149,7 +148,7 @@ func (a *Adjudicator) ensureRegistered(ctx context.Context, req channel.Adjudica
 	}
 
 	// In this case, the other party already registered and called withdraw.
-	if fabclient.IsUnderfunded(err) {
+	if fabclient.IsUnderfundedErr(err) {
 		return nil
 	}
 

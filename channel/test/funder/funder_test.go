@@ -12,11 +12,10 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package main
+package funder_test
 
 import (
 	"context"
-	"flag"
 	"github.com/perun-network/perun-fabric/channel"
 	"github.com/perun-network/perun-fabric/channel/test"
 	"github.com/perun-network/perun-fabric/wallet"
@@ -24,24 +23,22 @@ import (
 	pchannel "perun.network/go-perun/channel"
 	chtest "perun.network/go-perun/channel/test"
 	ptest "polycry.pt/poly-go/test"
+	"testing"
 	"time"
 )
 
 const (
-	chaincode   = "adjudicator"
 	testTimeout = 30 * time.Second
 	nrClients   = 2
 )
 
-func main() {
-	flag.Parse()
-
+func TestFunder(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
 	clients := [nrClients]FunderTestClient{}
 	for i := 0; i < 2; i++ {
-		clients[i] = makeTestClient(uint(i+1), chaincode) // i + 1 because test org got id 1 / 2
+		clients[i] = makeTestClient(uint(i+1), test.AdjudicatorName) // i + 1 because test org got id 1 / 2
 	}
 
 	// Create random test parameters

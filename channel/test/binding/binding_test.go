@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package main
+package binding_test
 
 import (
 	"fmt"
@@ -21,19 +21,16 @@ import (
 	"math/big"
 	"perun.network/go-perun/channel"
 	ptest "polycry.pt/poly-go/test"
+	"testing"
 
 	_ "github.com/perun-network/perun-fabric" // init backend
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 )
 
-const (
-	chaincode = "adjudicator"
-)
-
-func main() {
+func TestBinding(t *testing.T) {
 	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := test.NewTestSession(test.OrgNum(i), chaincode)
+		as, err := test.NewTestSession(test.OrgNum(i), test.AdjudicatorName)
 		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)

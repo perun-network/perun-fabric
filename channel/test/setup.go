@@ -34,6 +34,8 @@ import (
 const (
 	fabricSamplesEnv = "FABRIC_SAMPLES_DIR"
 	ChannelName      = "mychannel"
+	AdjudicatorName  = "adjudicator"
+	AssetholderName  = "assetholder"
 )
 
 type Org string

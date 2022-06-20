@@ -144,7 +144,7 @@ func (s *EventSubscription) getState() (*adj.StateReg, error) {
 
 	// Check fist time registration.
 	if err != nil {
-		if s.registered || !fabclient.IsChannelUnknown(err) {
+		if s.registered || !fabclient.IsChannelUnknownErr(err) {
 			return nil, err
 		}
 	} else if !s.registered {
