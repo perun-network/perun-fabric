@@ -24,7 +24,6 @@ import (
 	fabclient "github.com/perun-network/perun-fabric/client"
 	"math/big"
 	"perun.network/go-perun/channel"
-	"strings"
 	"time"
 )
 
@@ -64,7 +63,7 @@ func (a *Adjudicator) Register(ctx context.Context, req channel.AdjudicatorReq, 
 	if len(subChannels) > 0 {
 		return fmt.Errorf("subchannels not supported")
 	}
-	sigCh, err := adj.ConvertToSignedChannel(req) // Repackaging - TODO: Check for a better way here
+	sigCh, err := adj.ConvertToSignedChannel(req)
 	if err != nil {
 		return fmt.Errorf("register: %w", err)
 	}
@@ -149,8 +148,8 @@ func (a *Adjudicator) ensureRegistered(ctx context.Context, req channel.Adjudica
 		return nil
 	}
 
-	// In this case, the other party already registered before.
-	if e := fabclient.ParseClientErr(err); strings.Contains(e, "channel underfunded") { // TODO: Better on to off chain errors
+	// In this case, the other party already registered and called withdraw.
+	if fabclient.IsUnderfunded(err) {
 		return nil
 	}
 

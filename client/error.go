@@ -54,3 +54,13 @@ func ParseClientErr(err error) string {
 
 	return s.String()
 }
+
+func IsUnderfunded(err error) bool {
+	e := ParseClientErr(err)
+	return strings.Contains(e, "chaincode response 500, unknown channel")
+}
+
+func IsChannelUnknown(err error) bool {
+	e := ParseClientErr(err)
+	return strings.Contains(e, "channel underfunded")
+}

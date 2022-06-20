@@ -19,7 +19,6 @@ import (
 	"fmt"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	fabclient "github.com/perun-network/perun-fabric/client"
-	"strings"
 	"sync"
 	"time"
 
@@ -141,12 +140,11 @@ func (s *EventSubscription) convertStateTimeout(d *adj.StateReg) *Timeout {
 // If there is no state available yet pass.
 func (s *EventSubscription) getState() (*adj.StateReg, error) {
 	ch := s.channelID
-	d, err := s.adjudicator.binding.StateReg(ch) // Read state
+	d, err := s.adjudicator.binding.StateReg(ch)
 
 	// Check fist time registration.
 	if err != nil {
-		e := fabclient.ParseClientErr(err)
-		if s.registered || !strings.Contains(e, "chaincode response 500, unknown channel") { // TODO: Better on-chain error parsing
+		if s.registered || !fabclient.IsChannelUnknown(err) {
 			return nil, err
 		}
 	} else if !s.registered {
