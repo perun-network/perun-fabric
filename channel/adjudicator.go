@@ -8,6 +8,7 @@ import (
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/perun-network/perun-fabric/channel/binding"
 	fabclient "github.com/perun-network/perun-fabric/client"
+	"math/big"
 	"perun.network/go-perun/channel"
 	"strings"
 	"time"
@@ -80,6 +81,10 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 			return err
 		}
 
+		if reg.Version != req.Tx.Version {
+			return fmt.Errorf("invalid adjudicator request")
+		}
+
 		duration := reg.Timeout.Time().Sub(reg.Now.Time())
 		timeout := MakeTimeout(duration, a.polling)
 
@@ -91,7 +96,12 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 
 	// Concluded (or waited for challenge duration in case of dispute)
 	part := req.Params.Parts[req.Idx]
-	_, err := a.binding.Withdraw(id, part)
+	amount, err := a.binding.Withdraw(id, part)
+
+	if amount.Cmp(big.NewInt(0)) == 0 {
+		return fmt.Errorf("withdrawing zero") // Error expected if zero funds are withdrawn.
+	}
+
 	if err != nil {
 		return err
 	}
@@ -110,7 +120,7 @@ func (a *Adjudicator) Progress(ctx context.Context, req channel.ProgressReq) err
 // framework will call Close on the subscription once the respective channel
 // controller shuts down.
 func (a *Adjudicator) Subscribe(ctx context.Context, ch channel.ID) (channel.AdjudicatorSubscription, error) {
-	sub, err := NewEventSubscription(a, ch)
+	sub, err := NewEventSubscription(ctx, a, ch)
 	if err != nil {
 		return nil, fmt.Errorf("subscribe: %w", err)
 	}

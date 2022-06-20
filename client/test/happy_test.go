@@ -34,16 +34,16 @@ import (
 )
 
 const (
-	testTimeout  = 60 * time.Second
-	aliceHolding = 100000000
-	bobHolding   = 100000000
+	happyTestTimeout = 60 * time.Second
+	aliceHolding     = 1000
+	bobHolding       = 1000
 )
 
-var adjudicator = flag.String("adjudicator", "adjudicator-29812", "Adjudicator chaincode name")
-var assetholder = flag.String("assetholder", "assetholder-29812", "AssetHolder chaincode name")
+var adjudicator = flag.String("adjudicator", "adjudicator-18794", "Adjudicator chaincode name")
+var assetholder = flag.String("assetholder", "assetholder-18794", "AssetHolder chaincode name")
 
 func TestHappyAliceBob(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), happyTestTimeout)
 	defer cancel()
 
 	flag.Parse()
@@ -83,7 +83,6 @@ func TestHappyAliceBob(t *testing.T) {
 		}
 	}
 
-	//setup := makeRoleSetups(name, *adjudicator, *assetholder)
 	role[A] = clienttest.NewAlice(t, setup[A])
 	role[B] = clienttest.NewBob(t, setup[B])
 
@@ -98,17 +97,6 @@ func TestHappyAliceBob(t *testing.T) {
 		TxAmounts:   [2]*big.Int{big.NewInt(50), big.NewInt(0)},
 	}
 
-	// Amount that will be send from Alice to Bob.
-	//aliceToBob := big.NewInt(int64(execConfig.NumPayments[A])*execConfig.TxAmounts[A].Int64() - int64(execConfig.NumPayments[B])*execConfig.TxAmounts[B].Int64())
-	// Amount that will be send from Bob to Alice.
-	//bobToAlice := new(big.Int).Neg(aliceToBob)
-	// Expected balance changes of the accounts.
-	//deltas := map[types.AccountID]*big.Int{
-	//	wallet.AsAddr(s.Alice.Acc.Address()).AccountID(): aliceToBob,
-	//	wallet.AsAddr(s.Bob.Acc.Address()).AccountID():   bobToAlice,
-	//}
-	//s.AssertBalanceChanges(deltas, epsilon, func() {
 	err := clienttest.ExecuteTwoPartyTest(ctx, role, execConfig)
 	assert.NoError(t, err)
-	//})
 }

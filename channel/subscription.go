@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
+	fabclient "github.com/perun-network/perun-fabric/client"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,17 +28,18 @@ import (
 
 // EventSubscription provides methods for consuming channel events.
 type EventSubscription struct {
-	adjudicator *Adjudicator  // adjudicator is the referenced adjudicator instance.
-	channelID   channel.ID    // channelID is the channel identifier
-	prevState   adj.StateReg  // prevState is the previous channel state
-	timeout     *Timeout      // timeout is the current Event timeout
-	concluded   bool          // concluded indicates if a concluded event was created
-	closed      chan struct{} // closed signals if the sub is closed
-	err         chan error    // err forwards errors during event parsing
-	once        sync.Once     // once used to close channels
+	adjudicator *Adjudicator    // adjudicator is the referenced adjudicator instance.
+	channelID   channel.ID      // channelID is the channel identifier
+	prevState   adj.StateReg    // prevState is the previous channel state
+	timeout     *Timeout        // timeout is the current Event timeout
+	concluded   bool            // concluded indicates if a concluded event was created
+	closed      chan struct{}   // closed signals if the sub is closed
+	err         chan error      // err forwards errors during event parsing
+	once        sync.Once       // once used to close channels
+	ctx         context.Context // ctx is the context to establish the subscription
 }
 
-func NewEventSubscription(a *Adjudicator, ch channel.ID) (*EventSubscription, error) {
+func NewEventSubscription(ctx context.Context, a *Adjudicator, ch channel.ID) (*EventSubscription, error) {
 	return &EventSubscription{
 		adjudicator: a,
 		channelID:   ch,
@@ -44,63 +47,54 @@ func NewEventSubscription(a *Adjudicator, ch channel.ID) (*EventSubscription, er
 		err:         make(chan error, 1),
 		prevState:   adj.StateReg{},
 		timeout:     nil,
+		ctx:         ctx,
 	}, nil
 }
 
 // Next returns the most recent or next future event. If the subscription is
 // closed or any other error occurs, it returns nil.
 func (s *EventSubscription) Next() channel.AdjudicatorEvent {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
-	eventChan := make(chan channel.AdjudicatorEvent)
-	errChan := make(chan error)
+	for {
+		registered := true
+		ch := s.channelID
+		d, err := s.adjudicator.binding.StateReg(ch) // Read state
 
-	go func() {
-		for {
-			ch := s.channelID
-			d, err := s.adjudicator.binding.StateReg(ch) // Read state
-			if err != nil {
-				errChan <- err
-				return
+		// Check registration
+		if err != nil {
+			e := fabclient.ParseClientErr(err)
+			if !strings.Contains(e, "chaincode response 500, unknown channel") { // TODO: Better on-chain error parsing
+				s.err <- err
+				return nil
 			}
+			registered = false
+		}
 
+		if registered {
 			if !s.concluded {
 				// Check isFinal and timeout which indicates a concluded event.
-				//TODO/QUESTION: After the concluded event there will never be another event. How do we handle this?
 				if d.IsFinal || s.timeoutElapsed() {
 					s.concluded = true
-					eventChan <- s.makeConcludedEvent(d)
-					return
+					return s.makeConcludedEvent(d)
 				}
 
 				// Check state change which indicates a registered event.
 				if !d.Equal(s.prevState) {
 					s.prevState = *d
-					eventChan <- s.makeRegisteredEvent(d)
-					return
+					return s.makeRegisteredEvent(d)
 				}
 			} else {
-				errChan <- fmt.Errorf("subscription: channel already concluded")
-				return
-			}
-
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(s.adjudicator.polling):
+				s.err <- fmt.Errorf("already concluded")
+				return nil
 			}
 		}
-	}()
 
-	select {
-	case <-s.closed:
-		return nil
-	case err := <-errChan:
-		s.err <- err
-		return nil
-	case e := <-eventChan:
-		return e
+		select {
+		case <-s.ctx.Done():
+			s.err <- s.ctx.Err()
+			return nil
+		case <-time.After(s.adjudicator.polling):
+		}
 	}
 }
 
