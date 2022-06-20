@@ -1,30 +1,36 @@
-// SPDX-License-Identifier: Apache-2.0
+//  Copyright 2022 PolyCrypt GmbH
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
 
-package main
+package binding_test
 
 import (
-	"flag"
 	"fmt"
 	"github.com/perun-network/perun-fabric/channel/test"
 	"log"
 	"math/big"
-
 	"perun.network/go-perun/channel"
 	ptest "polycry.pt/poly-go/test"
+	"testing"
 
 	_ "github.com/perun-network/perun-fabric" // init backend
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 )
 
-var adjudicator = flag.String("adjudicator", "adjudicator-22618", "AssetHolder chaincode name")
-var assetholder = flag.String("assetholder", "assetholder-22618", "AssetHolder chaincode name")
-
-func main() {
-	flag.Parse()
-
+func TestBinding(t *testing.T) {
 	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := test.NewTestSession(test.OrgNum(i), *adjudicator, *assetholder)
+		as, err := test.NewTestSession(test.OrgNum(i), test.AdjudicatorName)
 		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)

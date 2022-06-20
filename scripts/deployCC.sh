@@ -10,7 +10,6 @@ export TEST_NETWORK_DIR="${FABRIC_SAMPLES_DIR}/test-network"
 export NETWORK_CMD="${TEST_NETWORK_DIR}/network.sh"
 export CHAINCODE="$1"
 export ADJ="adjudicator"
-export CC_INSTANCE="$RANDOM"
 
 function ensureNetworkUp() {
   if [ -d "${TEST_NETWORK_DIR}/organizations/peerOrganizations" ]; then
@@ -23,5 +22,5 @@ function ensureNetworkUp() {
 }
 
 ensureNetworkUp
-"${NETWORK_CMD}" deployCC -ccn "assetholder-${CC_INSTANCE}" -ccp "${ORIGIN}/chaincode/assetholder/" -ccl go
-"${NETWORK_CMD}" deployCC -ccn "adjudicator-${CC_INSTANCE}" -ccp "${ORIGIN}/chaincode/adjudicator/" -ccl go
+"${NETWORK_CMD}" deployCC -ccn "assetholder" -ccp "${ORIGIN}/chaincode/assetholder/" -ccl go
+"${NETWORK_CMD}" deployCC -ccn "adjudicator" -ccp "${ORIGIN}/chaincode/adjudicator/" -ccl go

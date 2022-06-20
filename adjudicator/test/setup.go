@@ -65,7 +65,7 @@ func NewSetup(rng *rand.Rand, opts ...SetupOption) *Setup {
 
 	parts := []wallet.Address{accs[0].Address(), accs[1].Address()}
 	params := &adj.Params{
-		ChallengeDuration: 60,
+		ChallengeDuration: 30,
 		Parts:             parts,
 		Nonce:             new(big.Int).SetUint64(rng.Uint64()),
 	}

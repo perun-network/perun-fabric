@@ -1,3 +1,17 @@
+//  Copyright 2022 PolyCrypt GmbH
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package channel
 
 import (
@@ -8,8 +22,8 @@ import (
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/perun-network/perun-fabric/channel/binding"
 	fabclient "github.com/perun-network/perun-fabric/client"
+	"math/big"
 	"perun.network/go-perun/channel"
-	"strings"
 	"time"
 )
 
@@ -49,7 +63,7 @@ func (a *Adjudicator) Register(ctx context.Context, req channel.AdjudicatorReq, 
 	if len(subChannels) > 0 {
 		return fmt.Errorf("subchannels not supported")
 	}
-	sigCh, err := adj.ConvertToSignedChannel(req) // Repackaging - TODO: Check for a better way here
+	sigCh, err := adj.ConvertToSignedChannel(req)
 	if err != nil {
 		return fmt.Errorf("register: %w", err)
 	}
@@ -80,6 +94,10 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 			return err
 		}
 
+		if reg.Version != req.Tx.Version {
+			return fmt.Errorf("invalid adjudicator request")
+		}
+
 		duration := reg.Timeout.Time().Sub(reg.Now.Time())
 		timeout := MakeTimeout(duration, a.polling)
 
@@ -91,7 +109,11 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 
 	// Concluded (or waited for challenge duration in case of dispute)
 	part := req.Params.Parts[req.Idx]
-	_, err := a.binding.Withdraw(id, part)
+	amount, err := a.binding.Withdraw(id, part)
+
+	if amount.Cmp(big.NewInt(0)) == 0 {
+		return fmt.Errorf("withdrawing zero") // Error expected if zero funds are withdrawn.
+	}
 	if err != nil {
 		return err
 	}
@@ -110,7 +132,7 @@ func (a *Adjudicator) Progress(ctx context.Context, req channel.ProgressReq) err
 // framework will call Close on the subscription once the respective channel
 // controller shuts down.
 func (a *Adjudicator) Subscribe(ctx context.Context, ch channel.ID) (channel.AdjudicatorSubscription, error) {
-	sub, err := NewEventSubscription(a, ch)
+	sub, err := NewEventSubscription(ctx, a, ch)
 	if err != nil {
 		return nil, fmt.Errorf("subscribe: %w", err)
 	}
@@ -125,8 +147,8 @@ func (a *Adjudicator) ensureRegistered(ctx context.Context, req channel.Adjudica
 		return nil
 	}
 
-	// In this case, the other party already registered before.
-	if e := fabclient.ParseClientErr(err); strings.Contains(e, "channel underfunded") { // TODO: Better on to off chain errors
+	// In this case, the other party already registered and called withdraw.
+	if fabclient.IsUnderfundedErr(err) {
 		return nil
 	}
 

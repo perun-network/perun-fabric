@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
+	fabclient "github.com/perun-network/perun-fabric/client"
 	"sync"
 	"time"
 
@@ -26,81 +27,66 @@ import (
 
 // EventSubscription provides methods for consuming channel events.
 type EventSubscription struct {
-	adjudicator *Adjudicator  // adjudicator is the referenced adjudicator instance.
-	channelID   channel.ID    // channelID is the channel identifier
-	prevState   adj.StateReg  // prevState is the previous channel state
-	timeout     *Timeout      // timeout is the current Event timeout
-	concluded   bool          // concluded indicates if a concluded event was created
-	closed      chan struct{} // closed signals if the sub is closed
-	err         chan error    // err forwards errors during event parsing
-	once        sync.Once     // once used to close channels
+	adjudicator *Adjudicator    // adjudicator is the referenced adjudicator instance.
+	channelID   channel.ID      // channelID is the channel identifier
+	prevState   adj.StateReg    // prevState is the previous channel state
+	timeout     *Timeout        // timeout is the current Event timeout
+	concluded   bool            // concluded indicates if a concluded event was created
+	registered  bool            // registered indicates if any state has been registered on-chain
+	err         chan error      // err forwards errors during event parsing
+	once        sync.Once       // once used to close channels
+	ctx         context.Context // ctx is the context to establish the subscription
 }
 
-func NewEventSubscription(a *Adjudicator, ch channel.ID) (*EventSubscription, error) {
+func NewEventSubscription(ctx context.Context, a *Adjudicator, ch channel.ID) (*EventSubscription, error) {
 	return &EventSubscription{
 		adjudicator: a,
 		channelID:   ch,
-		closed:      make(chan struct{}),
 		err:         make(chan error, 1),
 		prevState:   adj.StateReg{},
 		timeout:     nil,
+		ctx:         ctx,
 	}, nil
 }
 
 // Next returns the most recent or next future event. If the subscription is
 // closed or any other error occurs, it returns nil.
 func (s *EventSubscription) Next() channel.AdjudicatorEvent {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	for {
+		// Get the on chain state.
+		d, err := s.getState()
+		if err != nil {
+			s.err <- err
+			return nil
+		}
 
-	eventChan := make(chan channel.AdjudicatorEvent)
-	errChan := make(chan error)
-
-	go func() {
-		for {
-			ch := s.channelID
-			d, err := s.adjudicator.binding.StateReg(ch) // Read state
-			if err != nil {
-				errChan <- err
-				return
-			}
-
+		// Only progress if some state is registered.
+		if s.registered {
 			if !s.concluded {
-				// Check isFinal and timeout which indicates a concluded event.
-				//TODO/QUESTION: After the concluded event there will never be another event. How do we handle this?
+				// Check isFinal and timeout which can indicate a concluded event.
 				if d.IsFinal || s.timeoutElapsed() {
-					s.concluded = true
-					eventChan <- s.makeConcludedEvent(d)
-					return
+					s.concluded = true // ConcludedEvent is only emitted once.
+					return s.makeConcludedEvent(d)
 				}
 
-				// Check state change which indicates a registered event.
+				// Otherwise, check state change which indicates a registered event.
 				if !d.Equal(s.prevState) {
 					s.prevState = *d
-					eventChan <- s.makeRegisteredEvent(d)
-					return
+					return s.makeRegisteredEvent(d)
 				}
 			} else {
-				errChan <- fmt.Errorf("subscription: channel already concluded")
-				return
-			}
-
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(s.adjudicator.polling):
+				// There will be no further events because the ConcludedEvent got already returned.
+				s.err <- fmt.Errorf("already concluded")
+				return nil
 			}
 		}
-	}()
 
-	select {
-	case <-s.closed:
-		return nil
-	case err := <-errChan:
-		s.err <- err
-		return nil
-	case e := <-eventChan:
-		return e
+		select {
+		case <-s.ctx.Done():
+			s.err <- s.ctx.Err()
+			return nil
+		case <-time.After(s.adjudicator.polling):
+		}
 	}
 }
 
@@ -112,7 +98,7 @@ func (s *EventSubscription) Err() error {
 
 // Close closes the subscription.
 func (s *EventSubscription) Close() error {
-	s.once.Do(func() { close(s.closed); close(s.err) })
+	s.once.Do(func() { close(s.err) })
 	return nil
 }
 
@@ -148,4 +134,22 @@ func (s *EventSubscription) timeoutElapsed() bool {
 func (s *EventSubscription) convertStateTimeout(d *adj.StateReg) *Timeout {
 	timeoutDuration := d.Timeout.Time().Sub(d.State.Now.Time())
 	return MakeTimeout(timeoutDuration, s.adjudicator.polling)
+}
+
+// getState queries the current channel state from the ledger.
+// If there is no state available yet pass.
+func (s *EventSubscription) getState() (*adj.StateReg, error) {
+	ch := s.channelID
+	d, err := s.adjudicator.binding.StateReg(ch)
+
+	// Check fist time registration.
+	if err != nil {
+		if s.registered || !fabclient.IsChannelUnknownErr(err) {
+			return nil, err
+		}
+	} else if !s.registered {
+		s.registered = true
+	}
+
+	return d, nil
 }

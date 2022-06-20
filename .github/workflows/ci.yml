@@ -42,5 +42,12 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-      - name: Unit Tests
-        run: go test -timeout 10s ./...
+      - name: Setup and Run Tests
+        run: |
+          cd ..
+          curl -sSL https://bit.ly/2ysbOFE | bash -s
+          export FABRIC_SAMPLES_DIR=$(pwd)/fabric-samples/
+          cd perun-fabric/
+          ./scripts/deployCC.sh
+          go test -timeout 500s ./...
+          ./scripts/network.sh down

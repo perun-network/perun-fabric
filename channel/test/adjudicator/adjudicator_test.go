@@ -1,8 +1,21 @@
-package main
+//  Copyright 2022 PolyCrypt GmbH
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
+package adjudicator_test
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 	"github.com/perun-network/perun-fabric/channel/test"
@@ -12,20 +25,20 @@ import (
 	"math/rand"
 	pchannel "perun.network/go-perun/channel"
 	ptest "polycry.pt/poly-go/test"
+	"testing"
 	"time"
 )
 
-var adjudicator = flag.String("adjudicator", "adjudicator-23465", "Adjudicator chaincode name")
-var assetholder = flag.String("assetholder", "assetholder-23465", "AssetHolder chaincode name")
+const (
+	testTimeout = 120 * time.Second
+)
 
-const testTimeout = 120 * time.Second
-
-func main() {
-	TestAdjudicatorWithSubscriptionCollaborative()
-	TestAdjudicatorWithSubscriptionDispute()
+func TestAdjudicator(t *testing.T) {
+	t.Run("Collaborative", withSubscriptionCollaborative)
+	t.Run("Dispute", withSubscriptionDispute)
 }
 
-func TestAdjudicatorWithSubscriptionCollaborative() {
+func withSubscriptionCollaborative(t *testing.T) {
 	log.Printf("TestAdjudicatorWithSubscriptionCollaborative ...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
@@ -33,7 +46,7 @@ func TestAdjudicatorWithSubscriptionCollaborative() {
 
 	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := test.NewTestSession(test.OrgNum(i), *adjudicator, *assetholder)
+		as, err := test.NewTestSession(test.OrgNum(i), test.AdjudicatorName)
 		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)
@@ -92,7 +105,7 @@ func TestAdjudicatorWithSubscriptionCollaborative() {
 			req.Idx = pchannel.Index(i)
 			req.Acc = adjs[i].Account
 			log.Printf("Withdraw: Client %d ...", req.Idx)
-			err = adjs[i].Adjudicator.Withdraw(ctx, req, MakeStateMapFromSignedStates(subChannels...))
+			err = adjs[i].Adjudicator.Withdraw(ctx, req, makeStateMapFromSignedStates(subChannels...))
 			test.FatalClientErr("withdraw", err)
 		}
 		log.Println("Withdraw - Successful")
@@ -124,7 +137,7 @@ func TestAdjudicatorWithSubscriptionCollaborative() {
 	fmt.Println("")
 }
 
-func TestAdjudicatorWithSubscriptionDispute() {
+func withSubscriptionDispute(t *testing.T) {
 	log.Printf("TestAdjudicatorWithSubscriptionDispute ...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
@@ -132,7 +145,7 @@ func TestAdjudicatorWithSubscriptionDispute() {
 
 	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := test.NewTestSession(test.OrgNum(i), *adjudicator, *assetholder)
+		as, err := test.NewTestSession(test.OrgNum(i), test.AdjudicatorName)
 		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)
@@ -253,7 +266,7 @@ func TestAdjudicatorWithSubscriptionDispute() {
 			req.Idx = pchannel.Index(i)
 			req.Acc = adjs[i].Account
 			log.Printf("Withdraw: Client %d ... (takes some time because of dispute)", req.Idx)
-			err = adjs[i].Adjudicator.Withdraw(ctx, req, MakeStateMapFromSignedStates(subChannels...))
+			err = adjs[i].Adjudicator.Withdraw(ctx, req, makeStateMapFromSignedStates(subChannels...))
 			test.FatalClientErr("withdraw", err)
 		}
 		log.Println("Withdraw - Successful")
@@ -285,7 +298,7 @@ func TestAdjudicatorWithSubscriptionDispute() {
 	fmt.Println("")
 }
 
-func MakeStateMapFromSignedStates(channels ...pchannel.SignedState) pchannel.StateMap {
+func makeStateMapFromSignedStates(channels ...pchannel.SignedState) pchannel.StateMap {
 	m := pchannel.MakeStateMap()
 	for _, c := range channels {
 		m.Add(c.State)
