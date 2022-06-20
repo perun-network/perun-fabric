@@ -55,7 +55,7 @@ func TestDisputeMalloryCarol(t *testing.T) {
 
 	var adjs []*chtest.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := chtest.NewTestSession(chtest.OrgNum(i), *adjudicator, *assetholder)
+		as, err := chtest.NewTestSession(chtest.OrgNum(i), chaincode)
 		chtest.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)

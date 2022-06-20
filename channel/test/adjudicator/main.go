@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 	"github.com/perun-network/perun-fabric/channel/test"
@@ -29,10 +28,10 @@ import (
 	"time"
 )
 
-var adjudicator = flag.String("adjudicator", "adjudicator-23465", "Adjudicator chaincode name")
-var assetholder = flag.String("assetholder", "assetholder-23465", "AssetHolder chaincode name")
-
-const testTimeout = 120 * time.Second
+const (
+	testTimeout = 120 * time.Second
+	chaincode   = "adjudicator"
+)
 
 func main() {
 	TestAdjudicatorWithSubscriptionCollaborative()
@@ -47,7 +46,7 @@ func TestAdjudicatorWithSubscriptionCollaborative() {
 
 	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := test.NewTestSession(test.OrgNum(i), *adjudicator, *assetholder)
+		as, err := test.NewTestSession(test.OrgNum(i), chaincode)
 		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)
@@ -146,7 +145,7 @@ func TestAdjudicatorWithSubscriptionDispute() {
 
 	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := test.NewTestSession(test.OrgNum(i), *adjudicator, *assetholder)
+		as, err := test.NewTestSession(test.OrgNum(i), chaincode)
 		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)

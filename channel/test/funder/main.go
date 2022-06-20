@@ -27,11 +27,8 @@ import (
 	"time"
 )
 
-var assetholder = flag.String("assetholder", "assetholder-22618", "AssetHolder chaincode name")
-
-//var org = flag.Uint("org", 1, "Organization# of user to perform txs as (1 or 2)")
-
 const (
+	chaincode   = "adjudicator"
 	testTimeout = 30 * time.Second
 	nrClients   = 2
 )
@@ -44,7 +41,7 @@ func main() {
 
 	clients := [nrClients]FunderTestClient{}
 	for i := 0; i < 2; i++ {
-		clients[i] = makeTestClient(uint(i+1), *assetholder) // i + 1 because test org got id 1 / 2
+		clients[i] = makeTestClient(uint(i+1), chaincode) // i + 1 because test org got id 1 / 2
 	}
 
 	// Create random test parameters

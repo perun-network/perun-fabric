@@ -15,12 +15,10 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"github.com/perun-network/perun-fabric/channel/test"
 	"log"
 	"math/big"
-
 	"perun.network/go-perun/channel"
 	ptest "polycry.pt/poly-go/test"
 
@@ -28,15 +26,14 @@ import (
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 )
 
-var adjudicator = flag.String("adjudicator", "adjudicator-22618", "AssetHolder chaincode name")
-var assetholder = flag.String("assetholder", "assetholder-22618", "AssetHolder chaincode name")
+const (
+	chaincode = "adjudicator"
+)
 
 func main() {
-	flag.Parse()
-
 	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := test.NewTestSession(test.OrgNum(i), *adjudicator, *assetholder)
+		as, err := test.NewTestSession(test.OrgNum(i), chaincode)
 		test.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)

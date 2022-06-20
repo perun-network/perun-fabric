@@ -16,7 +16,6 @@ package client_test
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	chtest "github.com/perun-network/perun-fabric/channel/test"
 	wallet "github.com/perun-network/perun-fabric/wallet"
@@ -37,20 +36,17 @@ const (
 	happyTestTimeout = 60 * time.Second
 	aliceHolding     = 1000
 	bobHolding       = 1000
+	chaincode        = "adjudicator"
 )
-
-var adjudicator = flag.String("adjudicator", "adjudicator-18794", "Adjudicator chaincode name")
-var assetholder = flag.String("assetholder", "assetholder-18794", "AssetHolder chaincode name")
 
 func TestHappyAliceBob(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), happyTestTimeout)
 	defer cancel()
 
-	flag.Parse()
-
 	const (
 		A, B = 0, 1 // Indices of Alice and Bob
 	)
+
 	var (
 		name  = [2]string{"Alice", "Bob"}
 		role  [2]clienttest.Executer
@@ -59,7 +55,7 @@ func TestHappyAliceBob(t *testing.T) {
 
 	var adjs []*chtest.Session
 	for i := uint(1); i <= 2; i++ {
-		as, err := chtest.NewTestSession(chtest.OrgNum(i), *adjudicator, *assetholder)
+		as, err := chtest.NewTestSession(chtest.OrgNum(i), chaincode)
 		chtest.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
 		defer as.Close()
 		adjs = append(adjs, as)

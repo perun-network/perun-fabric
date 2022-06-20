@@ -32,7 +32,7 @@ type Session struct {
 	gw          *client.Gateway
 }
 
-func NewTestSession(org Org, adjudicator string, assetholder string) (_ *Session, err error) {
+func NewTestSession(org Org, adjudicator string) (_ *Session, err error) {
 	clientConn, err := NewGrpcConnection(org)
 	if err != nil {
 		return nil, fmt.Errorf("creating client conn: %w", err)

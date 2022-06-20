@@ -15,7 +15,6 @@
 package main
 
 import (
-	"flag"
 	"github.com/perun-network/perun-fabric/channel/binding"
 	"github.com/perun-network/perun-fabric/channel/test"
 	"log"
@@ -28,13 +27,12 @@ import (
 	_ "github.com/perun-network/perun-fabric" // init backend
 )
 
-var assetholder = flag.String("assetholder", "assetholder-22618", "AssetHolder chaincode name")
-var org = flag.Uint("org", 1, "Organization# of user to perform txs as (1 or 2)")
+const (
+	chaincode = "assetholder"
+)
 
 func main() {
-	flag.Parse()
-
-	org := test.OrgNum(*org)
+	org := test.OrgNum(1)
 	clientConn, err := test.NewGrpcConnection(org)
 	test.FatalErr("creating client conn", err)
 	defer clientConn.Close()
@@ -45,7 +43,7 @@ func main() {
 	defer gateway.Close()
 
 	network := gateway.GetNetwork(test.ChannelName)
-	ah := binding.NewAssetHolderBinding(network, *assetholder)
+	ah := binding.NewAssetHolderBinding(network, chaincode)
 
 	rng := ptest.Prng(ptest.NameStr("FabricAssetHolder"))
 	id, addr := chtest.NewRandomChannelID(rng), acc.Address()
