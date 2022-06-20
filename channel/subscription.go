@@ -33,7 +33,7 @@ type EventSubscription struct {
 	prevState   adj.StateReg    // prevState is the previous channel state
 	timeout     *Timeout        // timeout is the current Event timeout
 	concluded   bool            // concluded indicates if a concluded event was created
-	closed      chan struct{}   // closed signals if the sub is closed
+	registered  bool            // registered indicates if any state has been registered on-chain
 	err         chan error      // err forwards errors during event parsing
 	once        sync.Once       // once used to close channels
 	ctx         context.Context // ctx is the context to establish the subscription
@@ -43,7 +43,6 @@ func NewEventSubscription(ctx context.Context, a *Adjudicator, ch channel.ID) (*
 	return &EventSubscription{
 		adjudicator: a,
 		channelID:   ch,
-		closed:      make(chan struct{}),
 		err:         make(chan error, 1),
 		prevState:   adj.StateReg{},
 		timeout:     nil,
@@ -54,36 +53,30 @@ func NewEventSubscription(ctx context.Context, a *Adjudicator, ch channel.ID) (*
 // Next returns the most recent or next future event. If the subscription is
 // closed or any other error occurs, it returns nil.
 func (s *EventSubscription) Next() channel.AdjudicatorEvent {
-
 	for {
-		registered := true
-		ch := s.channelID
-		d, err := s.adjudicator.binding.StateReg(ch) // Read state
-
-		// Check registration
+		// Get the on chain state.
+		d, err := s.getState()
 		if err != nil {
-			e := fabclient.ParseClientErr(err)
-			if !strings.Contains(e, "chaincode response 500, unknown channel") { // TODO: Better on-chain error parsing
-				s.err <- err
-				return nil
-			}
-			registered = false
+			s.err <- err
+			return nil
 		}
 
-		if registered {
+		// Only progress if some state is registered.
+		if s.registered {
 			if !s.concluded {
-				// Check isFinal and timeout which indicates a concluded event.
+				// Check isFinal and timeout which can indicate a concluded event.
 				if d.IsFinal || s.timeoutElapsed() {
-					s.concluded = true
+					s.concluded = true // ConcludedEvent is only emitted once.
 					return s.makeConcludedEvent(d)
 				}
 
-				// Check state change which indicates a registered event.
+				// Otherwise, check state change which indicates a registered event.
 				if !d.Equal(s.prevState) {
 					s.prevState = *d
 					return s.makeRegisteredEvent(d)
 				}
 			} else {
+				// There will be no further events because the ConcludedEvent got already returned.
 				s.err <- fmt.Errorf("already concluded")
 				return nil
 			}
@@ -106,7 +99,7 @@ func (s *EventSubscription) Err() error {
 
 // Close closes the subscription.
 func (s *EventSubscription) Close() error {
-	s.once.Do(func() { close(s.closed); close(s.err) })
+	s.once.Do(func() { close(s.err) })
 	return nil
 }
 
@@ -142,4 +135,23 @@ func (s *EventSubscription) timeoutElapsed() bool {
 func (s *EventSubscription) convertStateTimeout(d *adj.StateReg) *Timeout {
 	timeoutDuration := d.Timeout.Time().Sub(d.State.Now.Time())
 	return MakeTimeout(timeoutDuration, s.adjudicator.polling)
+}
+
+// getState queries the current channel state from the ledger.
+// If there is no state available yet pass.
+func (s *EventSubscription) getState() (*adj.StateReg, error) {
+	ch := s.channelID
+	d, err := s.adjudicator.binding.StateReg(ch) // Read state
+
+	// Check fist time registration.
+	if err != nil {
+		e := fabclient.ParseClientErr(err)
+		if s.registered || !strings.Contains(e, "chaincode response 500, unknown channel") { // TODO: Better on-chain error parsing
+			return nil, err
+		}
+	} else if !s.registered {
+		s.registered = true
+	}
+
+	return d, nil
 }
