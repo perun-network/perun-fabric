@@ -49,7 +49,7 @@ func (l *StubLedger) PutState(sr *adj.StateReg) error {
 }
 
 func (l *StubLedger) GetHolding(id channel.ID, addr wallet.Address) (*big.Int, error) {
-	key := HoldingKey(id, addr)
+	key := ChannelHoldingKey(id, addr)
 	srb, err := l.Stub.GetState(key)
 	if err != nil {
 		return nil, fmt.Errorf("stub.GetState: %w", err)
@@ -61,7 +61,7 @@ func (l *StubLedger) GetHolding(id channel.ID, addr wallet.Address) (*big.Int, e
 }
 
 func (l *StubLedger) PutHolding(id channel.ID, addr wallet.Address, holding *big.Int) error {
-	key := HoldingKey(id, addr)
+	key := ChannelHoldingKey(id, addr)
 	if err := l.Stub.PutState(key, holding.Bytes()); err != nil {
 		return fmt.Errorf("stub.PutState: %w", err)
 	}
@@ -95,9 +95,9 @@ func absDuration(d time.Duration) time.Duration {
 const orgPrefix = "network.perun."
 
 func StateRegKey(id channel.ID) string {
-	return orgPrefix + "StateReg:" + adj.IDKey(id)
+	return orgPrefix + "ChannelStateReg:" + adj.IDKey(id)
 }
 
-func HoldingKey(id channel.ID, addr wallet.Address) string {
-	return orgPrefix + "Holding:" + adj.FundingKey(id, addr)
+func ChannelHoldingKey(id channel.ID, addr wallet.Address) string {
+	return orgPrefix + "ChannelHolding:" + adj.FundingKey(id, addr)
 }

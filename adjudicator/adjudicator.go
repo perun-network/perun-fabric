@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 )
@@ -14,27 +13,17 @@ import (
 // Adjudicator is an abstract implementation of the adjudicator smart
 // contract.
 type Adjudicator struct {
-	ledger Ledger
-	assets *AssetHolder
+	ledger   Ledger
+	asset    Asset
+	holdings *AssetHolder
 }
 
-func NewAdjudicator(ledger Ledger) *Adjudicator {
+func NewAdjudicator(ledger Ledger, asset Asset) *Adjudicator {
 	return &Adjudicator{
-		ledger: ledger,
-		assets: NewAssetHolder(ledger),
+		ledger:   ledger,
+		asset:    asset,
+		holdings: NewAssetHolder(ledger),
 	}
-}
-
-func (a *Adjudicator) Deposit(id channel.ID, part wallet.Address, amount *big.Int) error {
-	return a.assets.Deposit(id, part, amount)
-}
-
-func (a *Adjudicator) Holding(id channel.ID, part wallet.Address) (*big.Int, error) {
-	return a.assets.Holding(id, part)
-}
-
-func (a *Adjudicator) TotalHolding(id channel.ID, parts []wallet.Address) (*big.Int, error) {
-	return a.assets.TotalHolding(id, parts)
 }
 
 func (a *Adjudicator) Register(ch *SignedChannel) error {
@@ -51,7 +40,7 @@ func (a *Adjudicator) Register(ch *SignedChannel) error {
 	}
 
 	// check channel funding
-	total, err := a.assets.TotalHolding(id, ch.Params.Parts)
+	total, err := a.holdings.TotalHolding(id, ch.Params.Parts)
 	if err != nil {
 		return fmt.Errorf("querying total holding: %w", err)
 	}
@@ -103,7 +92,7 @@ func (a *Adjudicator) checkExistingStateReg(ch *SignedChannel) error {
 
 func (a *Adjudicator) updateHoldings(ch *SignedChannel) error {
 	for i, part := range ch.Params.Parts {
-		if err := a.assets.SetHolding(ch.State.ID, part, ch.State.Balances[i]); err != nil {
+		if err := a.holdings.SetHolding(ch.State.ID, part, ch.State.Balances[i]); err != nil {
 			return fmt.Errorf("updating holding[%d]: %w", i, err)
 		}
 	}
@@ -150,7 +139,7 @@ func (a *Adjudicator) Withdraw(id channel.ID, part wallet.Address) (*big.Int, er
 		}
 	}
 
-	return a.assets.Withdraw(id, part)
+	return a.holdings.Withdraw(id, part)
 }
 
 func ValidateChannel(ch *SignedChannel) error {
@@ -175,4 +164,48 @@ func ValidateChannel(ch *SignedChannel) error {
 	}
 
 	return nil
+}
+
+// Make functions of AssetHolder chaincode accessible.
+
+func (a *Adjudicator) Deposit(id channel.ID, part wallet.Address, amount *big.Int) error {
+	return a.holdings.Deposit(id, part, amount)
+}
+
+func (a *Adjudicator) Holding(id channel.ID, part wallet.Address) (*big.Int, error) {
+	return a.holdings.Holding(id, part)
+}
+
+func (a *Adjudicator) TotalHolding(id channel.ID, parts []wallet.Address) (*big.Int, error) {
+	return a.holdings.TotalHolding(id, parts)
+}
+
+// Make functions of token chaincode accessible.
+
+func (a *Adjudicator) Mint(identity string, addr wallet.Address, amount *big.Int) error {
+	return a.asset.Mint(identity, addr, amount)
+}
+
+func (a *Adjudicator) Burn(identity string, addr wallet.Address, amount *big.Int) error {
+	return a.asset.Burn(identity, addr, amount)
+}
+
+func (a *Adjudicator) AddressToAddressTransfer(identity string, sender wallet.Address, receiver wallet.Address, amount *big.Int) error {
+	return a.asset.AddressToAddressTransfer(identity, sender, receiver, amount)
+}
+
+func (a *Adjudicator) AddressToChannelTransfer(identity string, sender wallet.Address, receiver channel.ID, amount *big.Int) error {
+	return a.asset.AddressToChannelTransfer(identity, sender, receiver, amount)
+}
+
+func (a *Adjudicator) BalanceOfAddress(address wallet.Address) (*big.Int, error) {
+	return a.asset.BalanceOfAddress(address)
+}
+
+func (a *Adjudicator) RegisterAddress(identity string, addr wallet.Address) error {
+	return a.asset.RegisterAddress(identity, addr)
+}
+
+func (a *Adjudicator) GetAddressIdentity(addr wallet.Address) (string, error) {
+	return a.asset.GetAddressIdentity(addr)
 }

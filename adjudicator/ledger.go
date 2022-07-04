@@ -14,9 +14,8 @@ import (
 type (
 	// Ledger contains the read and write operations required by the Adjudicator.
 	Ledger interface {
-		StateLedger
-		HoldingLedger
-
+		StateLedger   // The channel's state is stored here.
+		HoldingLedger // The channel's holdings are stored here.
 		Now() Timestamp
 	}
 
