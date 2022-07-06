@@ -88,10 +88,10 @@ func (s StubAsset) AddressToAddressTransfer(identity string, sender wallet.Addre
 	if err != nil {
 		return err
 	}
-	if senderBal.Cmp(amount) > 0 {
+	if senderBal.Cmp(amount) < 0 {
 		return fmt.Errorf("not enought funds to transfer the requested amount")
 	}
-	receiverBal, err := s.BalanceOfAddress(sender)
+	receiverBal, err := s.BalanceOfAddress(receiver)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (s StubAsset) AddressToChannelTransfer(identity string, sender wallet.Addre
 	if err != nil {
 		return err
 	}
-	if senderBal.Cmp(amount) > 0 {
+	if senderBal.Cmp(amount) < 0 {
 		return fmt.Errorf("not enought funds to transfer the requested amount")
 	}
 	receiverBal, err := s.BalanceOfChannel(receiver)
@@ -166,7 +166,7 @@ func (s StubAsset) ChannelToAddressTransfer(sender channel.ID, receiver wallet.A
 	if err != nil {
 		return err
 	}
-	if senderBal.Cmp(amount) > 0 {
+	if senderBal.Cmp(amount) < 0 {
 		return fmt.Errorf("not enought funds to transfer the requested amount")
 	}
 	receiverBal, err := s.BalanceOfAddress(receiver)
@@ -214,7 +214,9 @@ func (s StubAsset) RegisterAddress(identity string, addr wallet.Address) error {
 	owner, err := s.GetAddressIdentity(addr)
 	if err != nil {
 		return err
-	} else if owner == "" {
+	} else if owner == identity { // Skip double registrations.
+		return nil
+	} else if owner == "" { // Already registered.
 		return fmt.Errorf("%s is already registered", addr.String())
 	}
 
