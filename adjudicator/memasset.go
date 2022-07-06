@@ -21,7 +21,7 @@ func (m MemAsset) Mint(identity string, addr wallet.Address, amount *big.Int) er
 
 	current, _ := m.BalanceOfAddress(addr) // No error expected
 	current.Add(current, amount)
-	m.holdings[AddressKey(addr)] = current
+	m.holdings[AddressKey(addr)] = new(big.Int).Set(current)
 	return nil
 }
 
@@ -40,7 +40,7 @@ func (m MemAsset) Burn(identity string, addr wallet.Address, amount *big.Int) er
 		return fmt.Errorf("not enought funds to burn the requested amount")
 	}
 
-	m.holdings[AddressKey(addr)] = current
+	m.holdings[AddressKey(addr)] = new(big.Int).Set(current)
 	return nil
 }
 
@@ -52,18 +52,18 @@ func (m MemAsset) AddressToAddressTransfer(identity string, sender wallet.Addres
 
 	// Get balances of parties.
 	senderBal, _ := m.BalanceOfAddress(sender) // No error expected.
-	if senderBal.Cmp(amount) > 0 {
+	if senderBal.Cmp(amount) < 0 {
 		return fmt.Errorf("not enought funds to transfer the requested amount")
 	}
-	receiverBal, _ := m.BalanceOfAddress(sender) // No error expected.
+	receiverBal, _ := m.BalanceOfAddress(receiver) // No error expected.
 
 	// Calc new balances.
 	senderBal.Sub(senderBal, amount)
 	receiverBal.Add(receiverBal, amount)
 
 	// Store new balances.
-	m.holdings[AddressKey(sender)] = senderBal
-	m.holdings[AddressKey(receiver)] = receiverBal
+	m.holdings[AddressKey(sender)] = new(big.Int).Set(senderBal)
+	m.holdings[AddressKey(receiver)] = new(big.Int).Set(receiverBal)
 	return nil
 }
 
@@ -75,7 +75,7 @@ func (m MemAsset) AddressToChannelTransfer(identity string, sender wallet.Addres
 
 	// Get balances of parties.
 	senderBal, _ := m.BalanceOfAddress(sender) // No error expected.
-	if senderBal.Cmp(amount) > 0 {
+	if senderBal.Cmp(amount) < 0 {
 		return fmt.Errorf("not enought funds to transfer the requested amount")
 	}
 	receiverBal, _ := m.BalanceOfChannel(receiver) // No error expected.
@@ -85,8 +85,8 @@ func (m MemAsset) AddressToChannelTransfer(identity string, sender wallet.Addres
 	receiverBal.Add(receiverBal, amount)
 
 	// Store new balances.
-	m.holdings[AddressKey(sender)] = senderBal
-	m.holdings[ChannelKey(receiver)] = receiverBal
+	m.holdings[AddressKey(sender)] = new(big.Int).Set(senderBal)
+	m.holdings[ChannelKey(receiver)] = new(big.Int).Set(receiverBal)
 	return nil
 }
 
@@ -98,7 +98,7 @@ func (m MemAsset) ChannelToAddressTransfer(sender channel.ID, receiver wallet.Ad
 
 	// Get balances of parties.
 	senderBal, _ := m.BalanceOfChannel(sender) // No error expected.
-	if senderBal.Cmp(amount) > 0 {
+	if senderBal.Cmp(amount) < 0 {
 		return fmt.Errorf("not enought funds to transfer the requested amount")
 	}
 	receiverBal, _ := m.BalanceOfAddress(receiver) // No error expected.
@@ -108,8 +108,8 @@ func (m MemAsset) ChannelToAddressTransfer(sender channel.ID, receiver wallet.Ad
 	receiverBal.Add(receiverBal, amount)
 
 	// Store new balances.
-	m.holdings[ChannelKey(sender)] = senderBal
-	m.holdings[AddressKey(receiver)] = receiverBal
+	m.holdings[ChannelKey(sender)] = new(big.Int).Set(senderBal)
+	m.holdings[AddressKey(receiver)] = new(big.Int).Set(receiverBal)
 	return nil
 }
 
