@@ -21,7 +21,11 @@ func TestValidateChannel(t *testing.T) {
 func TestAdjudicator(t *testing.T) {
 	t.Run("Deposit", func(t *testing.T) {
 		require := require.New(t)
-		s := adjtest.NewSetup(test.Prng(t))
+		s := adjtest.NewSetup(
+			test.Prng(t),
+			adjtest.WithChannelBalances(big.NewInt(1000), big.NewInt(1000)),
+			adjtest.WithMintedTokens(big.NewInt(2000), big.NewInt(2000)),
+		)
 
 		for i := 0; i < 2; i++ {
 			h, err := s.Adj.Holding(s.State.ID, s.Params.Parts[i])
@@ -33,10 +37,18 @@ func TestAdjudicator(t *testing.T) {
 		require.NoError(err)
 		require.Zero(th.Sign())
 
-		// Deposit twice each to test additivity
+		// Deposit twice each to test additivity.
+		// partID in the local case not necessary.
 		for i := 0; i < 2; i++ {
-			require.NoError(s.Adj.Deposit(s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
-			require.NoError(s.Adj.Deposit(s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
+			require.NoError(s.Adj.Deposit("", s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
+			require.NoError(s.Adj.Deposit("", s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
+		}
+
+		// Token balance for parts must be zero.
+		for i := 0; i < 2; i++ {
+			bal, err := s.Adj.BalanceOfAddress(s.Params.Parts[i])
+			require.Equal(big.NewInt(0), bal)
+			require.NoError(err)
 		}
 
 		for i := 0; i < 2; i++ {
@@ -50,6 +62,28 @@ func TestAdjudicator(t *testing.T) {
 		th, err = s.Adj.TotalHolding(s.State.ID, s.Params.Parts)
 		require.NoError(err)
 		require.Equal(doubleTotal, th)
+	})
+
+	t.Run("Deposit-underfunded", func(t *testing.T) {
+		require := require.New(t)
+		s := adjtest.NewSetup(
+			test.Prng(t),
+			adjtest.WithChannelBalances(big.NewInt(2000), big.NewInt(2000)),
+			adjtest.WithMintedTokens(big.NewInt(2000), big.NewInt(1000)),
+		)
+
+		for i := 0; i < 2; i++ {
+			h, err := s.Adj.Holding(s.State.ID, s.Params.Parts[i])
+			require.NoError(err)
+			require.Zero(h.Sign())
+		}
+
+		th, err := s.Adj.TotalHolding(s.State.ID, s.Params.Parts)
+		require.NoError(err)
+		require.Zero(th.Sign())
+
+		require.NoError(s.Adj.Deposit("", s.State.ID, s.Params.Parts[0], s.State.Balances[0]))
+		require.Error(s.Adj.Deposit("", s.State.ID, s.Params.Parts[1], s.State.Balances[1]))
 	})
 
 	t.Run("Register", func(t *testing.T) {
@@ -124,5 +158,38 @@ func TestAdjudicator(t *testing.T) {
 		adjsr0, err := s.Adj.StateReg(s.State.ID)
 		require.NoError(err)
 		require.True(sr0.Equal(*adjsr0))
+	})
+
+	t.Run("Withdraw", func(t *testing.T) {
+		require := require.New(t)
+		s := adjtest.NewSetup(test.Prng(t), adjtest.Funded)
+
+		// Token balance for parts must be zero.
+		for i := 0; i < 2; i++ {
+			bal, err := s.Adj.BalanceOfAddress(s.Params.Parts[i])
+			require.Equal(big.NewInt(0), bal)
+			require.NoError(err)
+		}
+
+		sr := s.StateReg()
+		ch := s.SignedChannel()
+		require.NoError(s.Adj.Register(ch))
+
+		adjsr, err := s.Adj.StateReg(s.State.ID)
+		require.NoError(err)
+		require.True(sr.Equal(*adjsr))
+		s.Ledger.AdvanceNow(s.Params.ChallengeDuration + 1)
+
+		for i := 0; i < 2; i++ {
+			_, err := s.Adj.Withdraw(s.State.ID, s.Parts[i])
+			require.NoError(err)
+		}
+
+		// Token balance for parts must be the original value.
+		for i := 0; i < 2; i++ {
+			bal, err := s.Adj.BalanceOfAddress(s.Params.Parts[i])
+			require.Equal(s.State.Balances[i], bal)
+			require.NoError(err)
+		}
 	})
 }

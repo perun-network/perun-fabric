@@ -39,7 +39,7 @@ func TestBinding(t *testing.T) {
 	rng := ptest.Prng(ptest.NameStr("FabricAdjudicator"))
 	setup := adjtest.NewSetup(rng,
 		adjtest.WithAccounts(adjs[0].Account, adjs[1].Account),
-		adjtest.WithBalances(big.NewInt(4000), big.NewInt(1000)))
+		adjtest.WithChannelBalances(big.NewInt(4000), big.NewInt(1000)))
 	ch, id := setup.SignedChannel(), setup.State.ID
 	log.Printf("Depositing channel: %+v", ch)
 	for i, part := range setup.Parts {

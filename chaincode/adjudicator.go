@@ -21,7 +21,7 @@ func (Adjudicator) contract(ctx contractapi.TransactionContextInterface) *adj.Ad
 }
 
 func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
-	id channel.ID, partStr string, amountStr string) error {
+	chID channel.ID, partStr string, amountStr string) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
@@ -30,7 +30,11 @@ func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
 	if err != nil {
 		return err
 	}
-	return a.contract(ctx).Deposit(id, part, amount)
+	clientID, err := ctx.GetClientIdentity().GetID()
+	if err != nil {
+		return err
+	}
+	return a.contract(ctx).Deposit(clientID, chID, part, amount)
 }
 
 func (a *Adjudicator) Holding(ctx contractapi.TransactionContextInterface,

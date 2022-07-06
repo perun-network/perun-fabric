@@ -70,6 +70,7 @@ func NewSetup(rng *rand.Rand, opts ...SetupOption) *Setup {
 		Nonce:             new(big.Int).SetUint64(rng.Uint64()),
 	}
 	ledger := NewTestLedger()
+	asset := adj.NewMemAsset()
 	s := &Setup{
 		Parts:  parts,
 		Accs:   accs,
@@ -82,7 +83,7 @@ func NewSetup(rng *rand.Rand, opts ...SetupOption) *Setup {
 			Now:      ledger.Now(),
 		},
 		Ledger:  ledger,
-		Adj:     adj.NewAdjudicator(ledger),
+		Adj:     adj.NewAdjudicator(ledger, asset),
 		Timeout: ledger.Now().Add(params.ChallengeDuration),
 	}
 
@@ -113,15 +114,6 @@ func (s *Setup) StateReg() *adj.StateReg {
 	}
 }
 
-var Funded = setupModifier(func(s *Setup) {
-	id := s.State.ID
-	for i, part := range s.Parts {
-		if err := s.Adj.Deposit(id, part, s.State.Balances[i]); err != nil {
-			panic(fmt.Sprintf("Setup: error funding participant[%d]: %v", i, err))
-		}
-	}
-})
-
 var WithFinalState = setupModifier(func(s *Setup) {
 	s.State.IsFinal = true
 })
@@ -132,7 +124,7 @@ func WithVersion(v uint64) SetupOption {
 	})
 }
 
-func WithBalances(bals ...channel.Bal) SetupOption {
+func WithChannelBalances(bals ...channel.Bal) SetupOption {
 	return setupModifier(func(s *Setup) {
 		if n := len(s.Params.Parts); len(bals) != n {
 			panic(fmt.Sprintf(
@@ -142,6 +134,30 @@ func WithBalances(bals ...channel.Bal) SetupOption {
 		s.State.Balances = bals
 	})
 }
+
+func WithMintedTokens(fund ...*big.Int) SetupOption {
+	return setupModifier(func(s *Setup) {
+		if n := len(s.Params.Parts); len(fund) != n {
+			panic(fmt.Sprintf(
+				"Setup: error minting tokens - mismatches number of participants (%d != %d)",
+				len(fund), n))
+		}
+
+		for i, part := range s.Parts {
+			_ = s.Adj.Mint("", part, fund[i])
+		}
+	})
+}
+
+var Funded = setupModifier(func(s *Setup) {
+	id := s.State.ID
+	for i, part := range s.Parts {
+		_ = s.Adj.Mint("", part, s.State.Balances[i])
+		if err := s.Adj.Deposit("", id, part, s.State.Balances[i]); err != nil {
+			panic(fmt.Sprintf("Setup: error funding participant[%d]: %v", i, err))
+		}
+	}
+})
 
 func WithAccounts(accs ...wallet.Account) SetupOption {
 	return withAccsOption{accs: accs}

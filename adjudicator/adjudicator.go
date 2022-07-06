@@ -139,7 +139,18 @@ func (a *Adjudicator) Withdraw(id channel.ID, part wallet.Address) (*big.Int, er
 		}
 	}
 
-	return a.holdings.Withdraw(id, part)
+	// Withdraw from channel.
+	holding, err := a.holdings.Withdraw(id, part)
+	if err != nil {
+		return nil, err
+	}
+
+	// Send funds back to participant.
+	err = a.asset.ChannelToAddressTransfer(id, part, holding)
+	if err != nil {
+		return nil, err
+	}
+	return holding, nil
 }
 
 func ValidateChannel(ch *SignedChannel) error {
@@ -166,10 +177,26 @@ func ValidateChannel(ch *SignedChannel) error {
 	return nil
 }
 
-// Make functions of AssetHolder chaincode accessible.
+// Connect AssetHolder:
+// These functions must be called via the Adjudicator to store states/holdings on the same HoldingLedger.
 
-func (a *Adjudicator) Deposit(id channel.ID, part wallet.Address, amount *big.Int) error {
-	return a.holdings.Deposit(id, part, amount)
+func (a *Adjudicator) Deposit(partID string, chID channel.ID, part wallet.Address, amount *big.Int) error {
+	// Transfer funds to channel.
+	err := a.asset.AddressToChannelTransfer(partID, part, chID, amount)
+	if err != nil {
+		return err
+	}
+
+	// Register deposit.
+	err = a.holdings.Deposit(chID, part, amount)
+	if err != nil {
+		// Ensure funds not stuck in channel if deposit fails.
+		transferErr := a.asset.ChannelToAddressTransfer(chID, part, amount)
+		if err != nil {
+			return transferErr
+		}
+	}
+	return err
 }
 
 func (a *Adjudicator) Holding(id channel.ID, part wallet.Address) (*big.Int, error) {
@@ -180,7 +207,7 @@ func (a *Adjudicator) TotalHolding(id channel.ID, parts []wallet.Address) (*big.
 	return a.holdings.TotalHolding(id, parts)
 }
 
-// Make functions of token chaincode accessible.
+// Connect Demo Asset:
 
 func (a *Adjudicator) Mint(identity string, addr wallet.Address, amount *big.Int) error {
 	return a.asset.Mint(identity, addr, amount)

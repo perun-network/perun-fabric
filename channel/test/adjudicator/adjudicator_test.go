@@ -55,7 +55,7 @@ func withSubscriptionCollaborative(t *testing.T) {
 	rng := ptest.Prng(ptest.NameStr("TestAdjudicatorWithSubscriptionCollaborative"))
 	setup := adjtest.NewSetup(rng,
 		adjtest.WithAccounts(wallet.NewRandomAccount(rng), wallet.NewRandomAccount(rng)),
-		adjtest.WithBalances(big.NewInt(4000), big.NewInt(1000)))
+		adjtest.WithChannelBalances(big.NewInt(4000), big.NewInt(1000)))
 	id := setup.State.ID
 
 	log.Printf("Depositing channel ...")
@@ -154,7 +154,7 @@ func withSubscriptionDispute(t *testing.T) {
 	rng := ptest.Prng(ptest.NameStr("TestAdjudicatorWithSubscriptionDispute"))
 	setup := adjtest.NewSetup(rng,
 		adjtest.WithAccounts(adjs[0].Account, adjs[1].Account),
-		adjtest.WithBalances(big.NewInt(4000), big.NewInt(1000)))
+		adjtest.WithChannelBalances(big.NewInt(4000), big.NewInt(1000)))
 	ch, id := setup.SignedChannel(), setup.State.ID
 
 	log.Printf("Depositing channel ...")
