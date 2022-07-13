@@ -5,9 +5,8 @@ package chaincode
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
-
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+	"math/big"
 	"perun.network/go-perun/channel"
 
 	adj "github.com/perun-network/perun-fabric/adjudicator"
@@ -18,11 +17,11 @@ type Adjudicator struct {
 }
 
 func (Adjudicator) contract(ctx contractapi.TransactionContextInterface) *adj.Adjudicator {
-	return adj.NewAdjudicator(NewStubLedger(ctx))
+	return adj.NewAdjudicator(NewStubLedger(ctx), NewStubAsset(ctx))
 }
 
 func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
-	id channel.ID, partStr string, amountStr string) error {
+	chID channel.ID, partStr string, amountStr string) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
@@ -31,7 +30,11 @@ func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
 	if err != nil {
 		return err
 	}
-	return a.contract(ctx).Deposit(id, part, amount)
+	clientID, err := ctx.GetClientIdentity().GetID()
+	if err != nil {
+		return err
+	}
+	return a.contract(ctx).Deposit(clientID, chID, part, amount)
 }
 
 func (a *Adjudicator) Holding(ctx contractapi.TransactionContextInterface,
@@ -78,4 +81,145 @@ func (a *Adjudicator) Withdraw(ctx contractapi.TransactionContextInterface,
 		return "", err
 	}
 	return stringWithErr(a.contract(ctx).Withdraw(id, part))
+}
+
+func (a *Adjudicator) MintToken(ctx contractapi.TransactionContextInterface,
+	addrStr string, amountStr string) error {
+	addr, err := UnmarshalAddress(addrStr)
+	if err != nil {
+		return err
+	}
+
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
+	}
+
+	id, err := ctx.GetClientIdentity().GetID()
+	if err != nil {
+		return err
+	}
+
+	err = a.contract(ctx).Mint(id, addr, amount)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *Adjudicator) BurnToken(ctx contractapi.TransactionContextInterface,
+	addrStr string, amountStr string) error {
+	addr, err := UnmarshalAddress(addrStr)
+	if err != nil {
+		return err
+	}
+
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
+	}
+
+	id, err := ctx.GetClientIdentity().GetID()
+	if err != nil {
+		return err
+	}
+
+	err = a.contract(ctx).Burn(id, addr, amount)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *Adjudicator) TokenToAddressTransfer(ctx contractapi.TransactionContextInterface,
+	senderAddrStr string, receiverAddrStr string, amountStr string) error {
+	senderAddr, err := UnmarshalAddress(senderAddrStr)
+	if err != nil {
+		return err
+	}
+
+	receiverAddr, err := UnmarshalAddress(receiverAddrStr)
+	if err != nil {
+		return err
+	}
+
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
+	}
+
+	id, err := ctx.GetClientIdentity().GetID()
+	if err != nil {
+		return err
+	}
+
+	err = a.contract(ctx).AddressToAddressTransfer(id, senderAddr, receiverAddr, amount)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *Adjudicator) TokenToChannelTransfer(ctx contractapi.TransactionContextInterface,
+	senderAddrStr string, receiver channel.ID, amountStr string) error {
+	senderAddr, err := UnmarshalAddress(senderAddrStr)
+	if err != nil {
+		return err
+	}
+
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
+	}
+
+	id, err := ctx.GetClientIdentity().GetID()
+	if err != nil {
+		return err
+	}
+	err = a.contract(ctx).AddressToChannelTransfer(id, senderAddr, receiver, amount)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *Adjudicator) TokenBalance(ctx contractapi.TransactionContextInterface,
+	addrStr string) (string, error) {
+	addr, err := UnmarshalAddress(addrStr)
+	if err != nil {
+		return "", err
+	}
+	return stringWithErr(a.contract(ctx).BalanceOfAddress(addr))
+}
+
+func (a *Adjudicator) RegisterAddress(ctx contractapi.TransactionContextInterface,
+	addr string) error {
+	part, err := UnmarshalAddress(addr)
+	if err != nil {
+		return err
+	}
+
+	clientID, err := ctx.GetClientIdentity().GetID()
+	if err != nil {
+		return err
+	}
+	err = a.contract(ctx).RegisterAddress(clientID, part)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *Adjudicator) GetAddressIdentity(ctx contractapi.TransactionContextInterface,
+	addrStr string) (string, error) {
+	addr, err := UnmarshalAddress(addrStr)
+	if err != nil {
+		return "", err
+	}
+
+	id, err := a.contract(ctx).GetAddressIdentity(addr)
+	if err != nil {
+		return id, err
+	}
+	return id, nil
 }

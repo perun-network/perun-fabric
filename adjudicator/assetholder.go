@@ -16,7 +16,7 @@ type AssetHolder struct {
 	ledger HoldingLedger
 }
 
-// AssetHolder returns a new AssetHolder operating on the given ledger.
+// NewAssetHolder returns a new AssetHolder operating on the given ledger.
 func NewAssetHolder(ledger HoldingLedger) *AssetHolder {
 	return &AssetHolder{ledger: ledger}
 }
@@ -29,7 +29,7 @@ func NewAssetHolder(ledger HoldingLedger) *AssetHolder {
 // Ledger access errors are propagated.
 func (a *AssetHolder) Deposit(id channel.ID, part wallet.Address, amount *big.Int) error {
 	if amount.Sign() == -1 {
-		panic("negative amount")
+		return fmt.Errorf("negative amount")
 	}
 
 	holding := new(big.Int)
@@ -77,7 +77,7 @@ func (a *AssetHolder) TotalHolding(id channel.ID, parts []wallet.Address) (*big.
 // Panics if `holding` is negative.
 func (a *AssetHolder) SetHolding(id channel.ID, part wallet.Address, holding *big.Int) error {
 	if holding.Sign() == -1 {
-		panic("negative amount")
+		return fmt.Errorf("negative amount")
 	}
 	return a.ledger.PutHolding(id, part, holding)
 }
@@ -89,7 +89,7 @@ func (a *AssetHolder) Withdraw(id channel.ID, part wallet.Address) (*big.Int, er
 	if err != nil {
 		return nil, err
 	}
-	if err := a.ledger.PutHolding(id, part, new(big.Int)); err != nil {
+	if err = a.ledger.PutHolding(id, part, new(big.Int)); err != nil {
 		return nil, fmt.Errorf("zeroing ledger holding: %w", err)
 	}
 	return holding, nil

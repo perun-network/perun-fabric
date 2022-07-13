@@ -8,8 +8,6 @@ export ORIGIN="$(pwd)"
 export FABRIC_SAMPLES_DIR="${FABRIC_SAMPLES_DIR:-../fabric-samples}"
 export TEST_NETWORK_DIR="${FABRIC_SAMPLES_DIR}/test-network"
 export NETWORK_CMD="${TEST_NETWORK_DIR}/network.sh"
-export CHAINCODE="$1"
-export ADJ="adjudicator"
 
 function ensureNetworkUp() {
   if [ -d "${TEST_NETWORK_DIR}/organizations/peerOrganizations" ]; then

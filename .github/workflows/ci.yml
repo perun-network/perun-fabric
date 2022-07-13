@@ -49,5 +49,5 @@ jobs:
           export FABRIC_SAMPLES_DIR=$(pwd)/fabric-samples/
           cd perun-fabric/
           ./scripts/deployCC.sh
-          go test -timeout 500s ./...
+          go test -timeout 700s ./...
           ./scripts/network.sh down

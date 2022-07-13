@@ -38,7 +38,7 @@ func TestFunder(t *testing.T) {
 
 	clients := [nrClients]FunderTestClient{}
 	for i := 0; i < 2; i++ {
-		clients[i] = makeTestClient(uint(i+1), test.AdjudicatorName) // i + 1 because test org got id 1 / 2
+		clients[i] = makeTestClient(uint(i+1), test.AssetholderName) // i + 1 because test org got id 1 / 2.
 	}
 
 	// Create random test parameters

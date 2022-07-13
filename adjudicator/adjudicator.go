@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 )
@@ -14,27 +13,17 @@ import (
 // Adjudicator is an abstract implementation of the adjudicator smart
 // contract.
 type Adjudicator struct {
-	ledger Ledger
-	assets *AssetHolder
+	ledger   Ledger
+	asset    Asset
+	holdings *AssetHolder
 }
 
-func NewAdjudicator(ledger Ledger) *Adjudicator {
+func NewAdjudicator(ledger Ledger, asset Asset) *Adjudicator {
 	return &Adjudicator{
-		ledger: ledger,
-		assets: NewAssetHolder(ledger),
+		ledger:   ledger,
+		asset:    asset,
+		holdings: NewAssetHolder(ledger),
 	}
-}
-
-func (a *Adjudicator) Deposit(id channel.ID, part wallet.Address, amount *big.Int) error {
-	return a.assets.Deposit(id, part, amount)
-}
-
-func (a *Adjudicator) Holding(id channel.ID, part wallet.Address) (*big.Int, error) {
-	return a.assets.Holding(id, part)
-}
-
-func (a *Adjudicator) TotalHolding(id channel.ID, parts []wallet.Address) (*big.Int, error) {
-	return a.assets.TotalHolding(id, parts)
 }
 
 func (a *Adjudicator) Register(ch *SignedChannel) error {
@@ -51,7 +40,7 @@ func (a *Adjudicator) Register(ch *SignedChannel) error {
 	}
 
 	// check channel funding
-	total, err := a.assets.TotalHolding(id, ch.Params.Parts)
+	total, err := a.holdings.TotalHolding(id, ch.Params.Parts)
 	if err != nil {
 		return fmt.Errorf("querying total holding: %w", err)
 	}
@@ -103,7 +92,7 @@ func (a *Adjudicator) checkExistingStateReg(ch *SignedChannel) error {
 
 func (a *Adjudicator) updateHoldings(ch *SignedChannel) error {
 	for i, part := range ch.Params.Parts {
-		if err := a.assets.SetHolding(ch.State.ID, part, ch.State.Balances[i]); err != nil {
+		if err := a.holdings.SetHolding(ch.State.ID, part, ch.State.Balances[i]); err != nil {
 			return fmt.Errorf("updating holding[%d]: %w", i, err)
 		}
 	}
@@ -150,7 +139,18 @@ func (a *Adjudicator) Withdraw(id channel.ID, part wallet.Address) (*big.Int, er
 		}
 	}
 
-	return a.assets.Withdraw(id, part)
+	// Withdraw from channel.
+	holding, err := a.holdings.Withdraw(id, part)
+	if err != nil {
+		return nil, err
+	}
+
+	// Send funds back to participant.
+	err = a.asset.ChannelToAddressTransfer(id, part, holding)
+	if err != nil {
+		return nil, err
+	}
+	return holding, nil
 }
 
 func ValidateChannel(ch *SignedChannel) error {
@@ -175,4 +175,64 @@ func ValidateChannel(ch *SignedChannel) error {
 	}
 
 	return nil
+}
+
+// Connect AssetHolder:
+// These functions must be called via the Adjudicator to store states/holdings on the same HoldingLedger.
+
+func (a *Adjudicator) Deposit(partID string, chID channel.ID, part wallet.Address, amount *big.Int) error {
+	// Transfer funds to channel.
+	err := a.asset.AddressToChannelTransfer(partID, part, chID, amount)
+	if err != nil {
+		return err
+	}
+
+	// Register deposit.
+	err = a.holdings.Deposit(chID, part, amount)
+	if err != nil {
+		// Ensure funds not stuck in channel if deposit fails.
+		transferErr := a.asset.ChannelToAddressTransfer(chID, part, amount)
+		if err != nil {
+			return transferErr
+		}
+	}
+	return err
+}
+
+func (a *Adjudicator) Holding(id channel.ID, part wallet.Address) (*big.Int, error) {
+	return a.holdings.Holding(id, part)
+}
+
+func (a *Adjudicator) TotalHolding(id channel.ID, parts []wallet.Address) (*big.Int, error) {
+	return a.holdings.TotalHolding(id, parts)
+}
+
+// Connect Demo Asset:
+
+func (a *Adjudicator) Mint(identity string, addr wallet.Address, amount *big.Int) error {
+	return a.asset.Mint(identity, addr, amount)
+}
+
+func (a *Adjudicator) Burn(identity string, addr wallet.Address, amount *big.Int) error {
+	return a.asset.Burn(identity, addr, amount)
+}
+
+func (a *Adjudicator) AddressToAddressTransfer(identity string, sender wallet.Address, receiver wallet.Address, amount *big.Int) error {
+	return a.asset.AddressToAddressTransfer(identity, sender, receiver, amount)
+}
+
+func (a *Adjudicator) AddressToChannelTransfer(identity string, sender wallet.Address, receiver channel.ID, amount *big.Int) error {
+	return a.asset.AddressToChannelTransfer(identity, sender, receiver, amount)
+}
+
+func (a *Adjudicator) BalanceOfAddress(address wallet.Address) (*big.Int, error) {
+	return a.asset.BalanceOfAddress(address)
+}
+
+func (a *Adjudicator) RegisterAddress(identity string, addr wallet.Address) error {
+	return a.asset.RegisterAddress(identity, addr)
+}
+
+func (a *Adjudicator) GetAddressIdentity(addr wallet.Address) (string, error) {
+	return a.asset.GetAddressIdentity(addr)
 }

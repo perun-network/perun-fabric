@@ -28,14 +28,15 @@ import (
 // EventSubscription provides methods for consuming channel events.
 type EventSubscription struct {
 	adjudicator *Adjudicator    // adjudicator is the referenced adjudicator instance.
-	channelID   channel.ID      // channelID is the channel identifier
-	prevState   adj.StateReg    // prevState is the previous channel state
-	timeout     *Timeout        // timeout is the current Event timeout
-	concluded   bool            // concluded indicates if a concluded event was created
-	registered  bool            // registered indicates if any state has been registered on-chain
-	err         chan error      // err forwards errors during event parsing
-	once        sync.Once       // once used to close channels
-	ctx         context.Context // ctx is the context to establish the subscription
+	channelID   channel.ID      // channelID is the channel identifier.
+	prevState   adj.StateReg    // prevState is the previous channel state.
+	timeout     *Timeout        // timeout is the current Event timeout.
+	concluded   bool            // concluded indicates if a concluded event was created.
+	registered  bool            // registered indicates if any state has been registered on-chain.
+	err         chan error      // err forwards errors during event parsing.
+	once        sync.Once       // once used to close channels.
+	closed      bool            // closed indicates that the channel is closed.
+	ctx         context.Context // ctx is the context to establish the subscription.
 }
 
 func NewEventSubscription(ctx context.Context, a *Adjudicator, ch channel.ID) (*EventSubscription, error) {
@@ -53,6 +54,10 @@ func NewEventSubscription(ctx context.Context, a *Adjudicator, ch channel.ID) (*
 // closed or any other error occurs, it returns nil.
 func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 	for {
+		if s.closed {
+			return nil
+		}
+
 		// Get the on chain state.
 		d, err := s.getState()
 		if err != nil {
@@ -93,12 +98,16 @@ func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 // Err returns the error status of the subscription. After Next returns nil,
 // Err should be checked for an error.
 func (s *EventSubscription) Err() error {
+	if s.closed {
+		return nil
+	}
 	return <-s.err
 }
 
 // Close closes the subscription.
 func (s *EventSubscription) Close() error {
 	s.once.Do(func() { close(s.err) })
+	s.closed = true
 	return nil
 }
 

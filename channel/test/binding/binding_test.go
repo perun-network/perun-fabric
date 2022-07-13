@@ -39,8 +39,18 @@ func TestBinding(t *testing.T) {
 	rng := ptest.Prng(ptest.NameStr("FabricAdjudicator"))
 	setup := adjtest.NewSetup(rng,
 		adjtest.WithAccounts(adjs[0].Account, adjs[1].Account),
-		adjtest.WithBalances(big.NewInt(4000), big.NewInt(1000)))
+		adjtest.WithChannelBalances(big.NewInt(4000), big.NewInt(1000)))
 	ch, id := setup.SignedChannel(), setup.State.ID
+
+	log.Printf("Register addresses/Mint tokens...")
+	for i, part := range setup.Parts {
+		err := adjs[i].Binding.RegisterAddress(part)
+		test.FatalErr("RegisterAddress", err)
+		err = adjs[i].Binding.MintToken(part, setup.State.Balances[i])
+		test.FatalErr("MintToken", err)
+	}
+	log.Printf("Register addresses - Successful")
+
 	log.Printf("Depositing channel: %+v", ch)
 	for i, part := range setup.Parts {
 		bal := setup.State.Balances[i]
@@ -72,6 +82,9 @@ func TestBinding(t *testing.T) {
 		test.FatalClientErr("withdrawing", err)
 		log.Printf("Withdrawn[%d]: %v", i, withdrawn)
 		test.RequireEqual(setup.State.Balances[i], withdrawn, "Withdraw")
+		bal, bErr := adjs[i].Binding.TokenBalance(setup.Parts[i])
+		test.FatalClientErr("TokenBalance", bErr)
+		test.RequireEqual(withdrawn, bal, "TokenBalance")
 	}
 
 	log.Print("Checking that final holding is zero")

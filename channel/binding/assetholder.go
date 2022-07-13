@@ -14,6 +14,9 @@ type AssetHolder struct {
 	Contract *client.Contract
 }
 
+// NewAssetHolderBinding creates the bindings for the on-chain AssetHolder.
+// These are only needed for isolated AssetHolder chaincode testing.
+// There is no connection to the Adjudicator here.
 func NewAssetHolderBinding(network *client.Network, chainCode string) *AssetHolder {
 	return &AssetHolder{Contract: network.GetContract(chainCode)}
 }
