@@ -82,7 +82,8 @@ func TestBinding(t *testing.T) {
 		test.FatalClientErr("withdrawing", err)
 		log.Printf("Withdrawn[%d]: %v", i, withdrawn)
 		test.RequireEqual(setup.State.Balances[i], withdrawn, "Withdraw")
-		bal, err := adjs[i].Binding.TokenBalance(setup.Parts[i])
+		bal, bErr := adjs[i].Binding.TokenBalance(setup.Parts[i])
+		test.FatalClientErr("TokenBalance", bErr)
 		test.RequireEqual(withdrawn, bal, "TokenBalance")
 	}
 
