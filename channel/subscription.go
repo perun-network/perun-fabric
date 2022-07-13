@@ -98,6 +98,9 @@ func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 // Err returns the error status of the subscription. After Next returns nil,
 // Err should be checked for an error.
 func (s *EventSubscription) Err() error {
+	if s.closed {
+		return nil
+	}
 	return <-s.err
 }
 
