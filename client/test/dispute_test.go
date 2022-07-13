@@ -20,13 +20,14 @@ import (
 	"fmt"
 	"github.com/perun-network/perun-fabric/channel"
 	chtest "github.com/perun-network/perun-fabric/channel/test"
-	"github.com/perun-network/perun-fabric/wallet"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	pclient "perun.network/go-perun/client"
 	clienttest "perun.network/go-perun/client/test"
+	"perun.network/go-perun/wallet"
 	"perun.network/go-perun/watcher/local"
 	"perun.network/go-perun/wire"
+	ptest "polycry.pt/poly-go/test"
 	"testing"
 	"time"
 )
@@ -62,9 +63,25 @@ func TestDisputeMalloryCarol(t *testing.T) {
 	}
 
 	bus := wire.NewLocalBus()
-
+	var addrs [2]wallet.Address
 	for i := 0; i < len(setup); i++ {
 		watcher, _ := local.NewWatcher(adjs[i].Adjudicator)
+
+		// We need the address for minting the tokens to be the same as the participant in the channel.
+		// ConstWallet implements a special behavior that allows us to ensure this.
+		rng := ptest.Prng(ptest.NameStr(fmt.Sprintf("DisputeTestClient%d", i)))
+		constWallet := chtest.NewConstTestWallet(rng, 1)
+
+		// Store address for balance check later.
+		addr := constWallet.GetConstAccount().Address()
+		addrs[i] = addr
+
+		// Mint tokens.
+		err := adjs[i].Binding.RegisterAddress(addr)
+		assert.NoError(t, err)
+
+		err = adjs[i].Binding.MintToken(addr, big.NewInt(1000))
+		assert.NoError(t, err)
 
 		setup[i] = clienttest.RoleSetup{
 			Name:              name[i],
@@ -72,8 +89,8 @@ func TestDisputeMalloryCarol(t *testing.T) {
 			Bus:               bus,
 			Funder:            adjs[i].Funder,
 			Adjudicator:       adjs[i].Adjudicator,
-			Wallet:            wallet.NewWallet(),
-			Timeout:           10 * time.Second, // Timeout waiting for other role, not challenge duration
+			Wallet:            constWallet,
+			Timeout:           10 * time.Second, // Timeout waiting for other role, not challenge duration.
 			ChallengeDuration: 15,
 			Watcher:           watcher,
 		}
@@ -95,4 +112,12 @@ func TestDisputeMalloryCarol(t *testing.T) {
 
 	err := clienttest.ExecuteTwoPartyTest(ctx, role, execConfig)
 	assert.NoError(t, err)
+
+	// Check resulting token balance.
+	expected := [2]*big.Int{big.NewInt(750), big.NewInt(1250)}
+	for i := 0; i < len(setup); i++ {
+		balance, err := adjs[i].Binding.TokenBalance(addrs[i])
+		assert.NoError(t, err)
+		assert.Equal(t, expected[i], balance)
+	}
 }
