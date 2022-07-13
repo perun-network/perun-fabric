@@ -58,6 +58,15 @@ func withSubscriptionCollaborative(t *testing.T) {
 		adjtest.WithChannelBalances(big.NewInt(4000), big.NewInt(1000)))
 	id := setup.State.ID
 
+	log.Printf("Register addresses/Mint tokens...")
+	for i, part := range setup.Parts {
+		err := adjs[i].Binding.RegisterAddress(part)
+		test.FatalErr("RegisterAddress", err)
+		err = adjs[i].Binding.MintToken(part, setup.State.Balances[i])
+		test.FatalErr("MintToken", err)
+	}
+	log.Printf("Register addresses - Successful")
+
 	log.Printf("Depositing channel ...")
 	for i, part := range setup.Parts {
 		bal := setup.State.Balances[i]
@@ -67,6 +76,9 @@ func withSubscriptionCollaborative(t *testing.T) {
 		test.FatalClientErr("querying holding", err)
 		log.Printf("Queried holding[%d]: %v", i, holding)
 		test.RequireEqual(bal, holding, "Holding")
+		tokenBal, err := adjs[i].Binding.TokenBalance(setup.Parts[i])
+		test.FatalClientErr("TokenBalance", err)
+		test.RequireEqual(big.NewInt(0), tokenBal, "TokenBalance")
 	}
 	log.Printf("Depositing channel - Successful")
 	fmt.Println("")
@@ -107,6 +119,9 @@ func withSubscriptionCollaborative(t *testing.T) {
 			log.Printf("Withdraw: Client %d ...", req.Idx)
 			err = adjs[i].Adjudicator.Withdraw(ctx, req, makeStateMapFromSignedStates(subChannels...))
 			test.FatalClientErr("withdraw", err)
+			tokenBal, err := adjs[i].Binding.TokenBalance(setup.Parts[i])
+			test.FatalErr("TokenBalance", err)
+			test.RequireEqual(setup.State.Balances[i], tokenBal, "TokenBalance")
 		}
 		log.Println("Withdraw - Successful")
 		fmt.Println("")
@@ -156,6 +171,15 @@ func withSubscriptionDispute(t *testing.T) {
 		adjtest.WithAccounts(adjs[0].Account, adjs[1].Account),
 		adjtest.WithChannelBalances(big.NewInt(4000), big.NewInt(1000)))
 	ch, id := setup.SignedChannel(), setup.State.ID
+
+	log.Printf("Register addresses/Mint tokens...")
+	for i, part := range setup.Parts {
+		err := adjs[i].Binding.RegisterAddress(part)
+		test.FatalErr("RegisterAddress", err)
+		err = adjs[i].Binding.MintToken(part, setup.State.Balances[i])
+		test.FatalErr("MintToken", err)
+	}
+	log.Printf("Register addresses - Successful")
 
 	log.Printf("Depositing channel ...")
 	for i, part := range setup.Parts {
@@ -268,6 +292,9 @@ func withSubscriptionDispute(t *testing.T) {
 			log.Printf("Withdraw: Client %d ... (takes some time because of dispute)", req.Idx)
 			err = adjs[i].Adjudicator.Withdraw(ctx, req, makeStateMapFromSignedStates(subChannels...))
 			test.FatalClientErr("withdraw", err)
+			tokenBal, err := adjs[i].Binding.TokenBalance(setup.Parts[i])
+			test.FatalErr("TokenBalance", err)
+			test.RequireEqual(setup.State.Balances[i], tokenBal, "TokenBalance")
 		}
 		log.Println("Withdraw - Successful")
 		fmt.Println("")
