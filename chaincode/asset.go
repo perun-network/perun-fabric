@@ -1,8 +1,8 @@
 package chaincode
 
 import (
+	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -195,7 +195,6 @@ func (s StubAsset) BalanceOfAddress(address wallet.Address) (*big.Int, error) {
 	} else if srb == nil {
 		return big.NewInt(0), nil
 	}
-
 	return new(big.Int).SetBytes(srb), nil
 }
 
@@ -206,7 +205,6 @@ func (s StubAsset) BalanceOfChannel(id channel.ID) (*big.Int, error) {
 	} else if srb == nil {
 		return big.NewInt(0), nil
 	}
-
 	return new(big.Int).SetBytes(srb), nil
 }
 
@@ -214,17 +212,15 @@ func (s StubAsset) RegisterAddress(identity string, addr wallet.Address) error {
 	owner, err := s.GetAddressIdentity(addr)
 	if err != nil {
 		return err
-	} else if owner == identity { // Skip double registrations.
-		return nil
-	} else if owner == "" { // Already registered.
-		return fmt.Errorf("%s is already registered", addr.String())
 	}
 
-	clientConv, err := json.Marshal(identity)
-	if err != nil {
-		return err
+	// Skip double registrations.
+	if owner == identity {
+		return nil
+	} else if owner != "" && owner != identity { // Already registered.
+		return fmt.Errorf("%s is already registered", addr.String())
 	}
-	if err := s.Stub.PutState(identityKey(addr), clientConv); err != nil {
+	if err := s.Stub.PutState(identityKey(addr), []byte(identity)); err != nil {
 		return fmt.Errorf("stub.PutState: %w", err)
 	}
 	return nil
@@ -239,11 +235,7 @@ func (s StubAsset) GetAddressIdentity(addr wallet.Address) (string, error) {
 	} else if srb == nil {
 		return "", nil
 	}
-
-	var owner string
-	if err := json.Unmarshal(srb, &owner); err != nil {
-		return "", fmt.Errorf("json-unmarshaling string: %w", err)
-	}
+	owner := bytes.NewBuffer(srb).String()
 	return owner, nil
 }
 
@@ -254,7 +246,7 @@ func (s StubAsset) checkIdentity(identity string, addr wallet.Address) error {
 	if err != nil {
 		return err
 	} else if addrId != identity {
-		return fmt.Errorf("identity %s did not register address %s", identity, addr.String())
+		return fmt.Errorf("identity %s did not register address %s - identity %s is owner", identity, addr.String(), addrId)
 	}
 	return nil
 }

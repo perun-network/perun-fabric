@@ -69,7 +69,6 @@ func (f *Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 	f.m.Lock()
 	defer f.m.Unlock()
 	err := f.binding.Deposit(id, part, funding)
-
 	if err != nil {
 		return err
 	}

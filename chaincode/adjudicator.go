@@ -184,17 +184,12 @@ func (a *Adjudicator) TokenToChannelTransfer(ctx contractapi.TransactionContextI
 }
 
 func (a *Adjudicator) TokenBalance(ctx contractapi.TransactionContextInterface,
-	addrStr string) (*big.Int, error) {
+	addrStr string) (string, error) {
 	addr, err := UnmarshalAddress(addrStr)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-
-	bal, err := a.contract(ctx).BalanceOfAddress(addr)
-	if err != nil {
-		return nil, err
-	}
-	return bal, nil
+	return stringWithErr(a.contract(ctx).BalanceOfAddress(addr))
 }
 
 func (a *Adjudicator) RegisterAddress(ctx contractapi.TransactionContextInterface,
