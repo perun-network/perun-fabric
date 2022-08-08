@@ -22,7 +22,6 @@ import (
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/perun-network/perun-fabric/channel/binding"
 	fabclient "github.com/perun-network/perun-fabric/client"
-	"math/big"
 	"perun.network/go-perun/channel"
 	"time"
 )
@@ -109,13 +108,9 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 
 	// Concluded (or waited for challenge duration in case of dispute)
 	part := req.Params.Parts[req.Idx]
-	amount, err := a.binding.Withdraw(id, part)
+	_, err := a.binding.Withdraw(id, part)
 	if err != nil {
 		return err
-	}
-
-	if amount.Cmp(big.NewInt(0)) == 0 {
-		return fmt.Errorf("withdrawing zero") // Error expected if zero funds are withdrawn.
 	}
 	return nil
 }

@@ -40,13 +40,13 @@ func TestAdjudicator(t *testing.T) {
 		// Deposit twice each to test additivity.
 		// partID in the local case not necessary.
 		for i := 0; i < 2; i++ {
-			require.NoError(s.Adj.Deposit("", s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
-			require.NoError(s.Adj.Deposit("", s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
+			require.NoError(s.Adj.Deposit(s.Params.Parts[i].String(), s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
+			require.NoError(s.Adj.Deposit(s.Params.Parts[i].String(), s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
 		}
 
 		// Token balance for parts must be zero.
 		for i := 0; i < 2; i++ {
-			bal, err := s.Adj.BalanceOfAddress(s.Params.Parts[i])
+			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String())
 			require.Equal(big.NewInt(0), bal)
 			require.NoError(err)
 		}
@@ -82,8 +82,8 @@ func TestAdjudicator(t *testing.T) {
 		require.NoError(err)
 		require.Zero(th.Sign())
 
-		require.NoError(s.Adj.Deposit("", s.State.ID, s.Params.Parts[0], s.State.Balances[0]))
-		require.Error(s.Adj.Deposit("", s.State.ID, s.Params.Parts[1], s.State.Balances[1]))
+		require.NoError(s.Adj.Deposit(s.Params.Parts[0].String(), s.State.ID, s.Params.Parts[0], s.State.Balances[0]))
+		require.Error(s.Adj.Deposit(s.Params.Parts[1].String(), s.State.ID, s.Params.Parts[1], s.State.Balances[1]))
 	})
 
 	t.Run("Register", func(t *testing.T) {
@@ -166,7 +166,7 @@ func TestAdjudicator(t *testing.T) {
 
 		// Token balance for parts must be zero.
 		for i := 0; i < 2; i++ {
-			bal, err := s.Adj.BalanceOfAddress(s.Params.Parts[i])
+			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String())
 			require.Equal(big.NewInt(0), bal)
 			require.NoError(err)
 		}
@@ -181,13 +181,13 @@ func TestAdjudicator(t *testing.T) {
 		s.Ledger.AdvanceNow(s.Params.ChallengeDuration + 1)
 
 		for i := 0; i < 2; i++ {
-			_, err := s.Adj.Withdraw(s.State.ID, s.Parts[i])
+			_, err := s.Adj.Withdraw(s.Parts[i].String(), s.State.ID, s.Parts[i])
 			require.NoError(err)
 		}
 
 		// Token balance for parts must be the original value.
 		for i := 0; i < 2; i++ {
-			bal, err := s.Adj.BalanceOfAddress(s.Params.Parts[i])
+			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String()) // TODO: Fix parts
 			require.Equal(s.State.Balances[i], bal)
 			require.NoError(err)
 		}

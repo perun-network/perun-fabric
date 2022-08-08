@@ -17,24 +17,27 @@ type Adjudicator struct {
 }
 
 func (Adjudicator) contract(ctx contractapi.TransactionContextInterface) *adj.Adjudicator {
-	return adj.NewAdjudicator(NewStubLedger(ctx), NewStubAsset(ctx))
+	return adj.NewAdjudicator(ctx.GetStub().GetChannelID(), NewStubLedger(ctx), NewStubAsset(ctx))
 }
 
 func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
 	chID channel.ID, partStr string, amountStr string) error {
+	calleeID, err := ctx.GetClientIdentity().GetID()
+	if err != nil {
+		return err
+	}
+
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
+
 	part, err := UnmarshalAddress(partStr)
 	if err != nil {
 		return err
 	}
-	clientID, err := ctx.GetClientIdentity().GetID()
-	if err != nil {
-		return err
-	}
-	return a.contract(ctx).Deposit(clientID, chID, part, amount)
+
+	return a.contract(ctx).Deposit(calleeID, chID, part, amount)
 }
 
 func (a *Adjudicator) Holding(ctx contractapi.TransactionContextInterface,
@@ -76,16 +79,21 @@ func (a *Adjudicator) StateReg(ctx contractapi.TransactionContextInterface,
 
 func (a *Adjudicator) Withdraw(ctx contractapi.TransactionContextInterface,
 	id channel.ID, partStr string) (string, error) {
+	calleeID, err := ctx.GetClientIdentity().GetID() // TODO: Remove for new Withdraw logic with signed request.
+	if err != nil {
+		return "", err
+	}
+
 	part, err := UnmarshalAddress(partStr)
 	if err != nil {
 		return "", err
 	}
-	return stringWithErr(a.contract(ctx).Withdraw(id, part))
+	return stringWithErr(a.contract(ctx).Withdraw(calleeID, id, part))
 }
 
 func (a *Adjudicator) MintToken(ctx contractapi.TransactionContextInterface,
-	addrStr string, amountStr string) error {
-	addr, err := UnmarshalAddress(addrStr)
+	amountStr string) error {
+	calleeID, err := ctx.GetClientIdentity().GetID()
 	if err != nil {
 		return err
 	}
@@ -95,12 +103,7 @@ func (a *Adjudicator) MintToken(ctx contractapi.TransactionContextInterface,
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
 
-	id, err := ctx.GetClientIdentity().GetID()
-	if err != nil {
-		return err
-	}
-
-	err = a.contract(ctx).Mint(id, addr, amount)
+	err = a.contract(ctx).Mint(calleeID, amount)
 	if err != nil {
 		return err
 	}
@@ -108,8 +111,8 @@ func (a *Adjudicator) MintToken(ctx contractapi.TransactionContextInterface,
 }
 
 func (a *Adjudicator) BurnToken(ctx contractapi.TransactionContextInterface,
-	addrStr string, amountStr string) error {
-	addr, err := UnmarshalAddress(addrStr)
+	amountStr string) error {
+	calleeID, err := ctx.GetClientIdentity().GetID()
 	if err != nil {
 		return err
 	}
@@ -119,50 +122,21 @@ func (a *Adjudicator) BurnToken(ctx contractapi.TransactionContextInterface,
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
 
-	id, err := ctx.GetClientIdentity().GetID()
-	if err != nil {
-		return err
-	}
-
-	err = a.contract(ctx).Burn(id, addr, amount)
+	err = a.contract(ctx).Burn(calleeID, amount)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (a *Adjudicator) TokenToAddressTransfer(ctx contractapi.TransactionContextInterface,
-	senderAddrStr string, receiverAddrStr string, amountStr string) error {
-	senderAddr, err := UnmarshalAddress(senderAddrStr)
+func (a *Adjudicator) TransferToken(ctx contractapi.TransactionContextInterface,
+	receiverStr string, amountStr string) error {
+	calleeID, err := ctx.GetClientIdentity().GetID()
 	if err != nil {
 		return err
 	}
 
-	receiverAddr, err := UnmarshalAddress(receiverAddrStr)
-	if err != nil {
-		return err
-	}
-
-	amount, ok := new(big.Int).SetString(amountStr, 10)
-	if !ok {
-		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
-	}
-
-	id, err := ctx.GetClientIdentity().GetID()
-	if err != nil {
-		return err
-	}
-
-	err = a.contract(ctx).AddressToAddressTransfer(id, senderAddr, receiverAddr, amount)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (a *Adjudicator) TokenToChannelTransfer(ctx contractapi.TransactionContextInterface,
-	senderAddrStr string, receiver channel.ID, amountStr string) error {
-	senderAddr, err := UnmarshalAddress(senderAddrStr)
+	receiverID, err := UnmarshalID(receiverStr)
 	if err != nil {
 		return err
 	}
@@ -172,11 +146,7 @@ func (a *Adjudicator) TokenToChannelTransfer(ctx contractapi.TransactionContextI
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
 
-	id, err := ctx.GetClientIdentity().GetID()
-	if err != nil {
-		return err
-	}
-	err = a.contract(ctx).AddressToChannelTransfer(id, senderAddr, receiver, amount)
+	err = a.contract(ctx).Transfer(calleeID, receiverID, amount)
 	if err != nil {
 		return err
 	}
@@ -184,42 +154,10 @@ func (a *Adjudicator) TokenToChannelTransfer(ctx contractapi.TransactionContextI
 }
 
 func (a *Adjudicator) TokenBalance(ctx contractapi.TransactionContextInterface,
-	addrStr string) (string, error) {
-	addr, err := UnmarshalAddress(addrStr)
+	id string) (string, error) {
+	idToCheck, err := UnmarshalID(id)
 	if err != nil {
 		return "", err
 	}
-	return stringWithErr(a.contract(ctx).BalanceOfAddress(addr))
-}
-
-func (a *Adjudicator) RegisterAddress(ctx contractapi.TransactionContextInterface,
-	addr string) error {
-	part, err := UnmarshalAddress(addr)
-	if err != nil {
-		return err
-	}
-
-	clientID, err := ctx.GetClientIdentity().GetID()
-	if err != nil {
-		return err
-	}
-	err = a.contract(ctx).RegisterAddress(clientID, part)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (a *Adjudicator) GetAddressIdentity(ctx contractapi.TransactionContextInterface,
-	addrStr string) (string, error) {
-	addr, err := UnmarshalAddress(addrStr)
-	if err != nil {
-		return "", err
-	}
-
-	id, err := a.contract(ctx).GetAddressIdentity(addr)
-	if err != nil {
-		return id, err
-	}
-	return id, nil
+	return stringWithErr(a.contract(ctx).BalanceOfID(idToCheck))
 }

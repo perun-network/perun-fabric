@@ -19,7 +19,6 @@ import (
 	"github.com/perun-network/perun-fabric/channel"
 	"github.com/perun-network/perun-fabric/channel/test"
 	"github.com/perun-network/perun-fabric/wallet"
-	"log"
 	pchannel "perun.network/go-perun/channel"
 	chtest "perun.network/go-perun/channel/test"
 	ptest "polycry.pt/poly-go/test"
@@ -49,7 +48,7 @@ func TestFunder(t *testing.T) {
 		chtest.WithParts(clients[0].acc.Address(), clients[1].acc.Address()),
 	)
 
-	log.Printf("Creating and sending funding request ...")
+	// Create and send funding request.
 	for i := 0; i < nrClients; i++ {
 		req := &pchannel.FundingReq{
 			Params:    params,
@@ -68,7 +67,6 @@ func TestFunder(t *testing.T) {
 		err := <-clients[i].errChan
 		test.FatalErr("funding", err)
 	}
-	log.Printf("Funding successful.")
 }
 
 type FunderTestClient struct {
@@ -83,7 +81,7 @@ func makeTestClient(organization uint, assetholder string) FunderTestClient {
 	test.FatalErr("creating client conn", err)
 
 	// Create a Gateway connection for a specific client identity
-	gateway, acc, err := test.NewGateway(org, clientConn)
+	gateway, acc, _, err := test.NewGateway(org, clientConn)
 	test.FatalErr("connecting to gateway", err)
 
 	network := gateway.GetNetwork(test.ChannelName)

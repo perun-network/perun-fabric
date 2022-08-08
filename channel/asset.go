@@ -42,13 +42,14 @@ func (*asset) Decode(io.Reader) error {
 	return nil
 }
 
-// MarshalBinary - noop
+// MarshalBinary - noop.
 func (asset) MarshalBinary() ([]byte, error) { return nil, nil }
 
-// UnmarshalBinary - noop
+// UnmarshalBinary - noop.
 func (asset) UnmarshalBinary([]byte) error { return nil }
 
-// Equal returns true
+// Equal returns true if the type matches.
 func (asset) Equal(other pchannel.Asset) bool {
-	return true
+	_, ok := other.(asset)
+	return ok
 }

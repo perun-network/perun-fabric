@@ -17,7 +17,6 @@ package test
 import (
 	"fmt"
 	"github.com/go-test/deep"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -94,7 +93,7 @@ func keyDir(org Org) string {
 
 func keyPath(org Org) (string, error) {
 	kp := keyDir(org)
-	files, err := ioutil.ReadDir(kp)
+	files, err := os.ReadDir(kp)
 	if err != nil {
 		return "", fmt.Errorf("reading private key directory: %w", err)
 	}
@@ -112,7 +111,7 @@ func NewGrpcConnection(org Org) (*grpc.ClientConn, error) {
 }
 
 // NewIdentity creates a client identity for this Gateway connection using an X.509 certificate.
-func NewIdentity(org Org) (*identity.X509Identity, *wallet.Address, error) {
+func NewIdentity(org Org) (*identity.X509Identity, *wallet.Address, string, error) {
 	return pclient.NewIdentity(mspID(org), certPath(org))
 }
 
@@ -125,18 +124,18 @@ func NewAccountWithSigner(org Org) (identity.Sign, *wallet.Account, error) {
 	return pclient.NewAccountWithSigner(path)
 }
 
-func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.Account, error) {
-	id, addr, err := NewIdentity(org)
+func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.Account, string, error) {
+	id, addr, onChainID, err := NewIdentity(org)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	sign, acc, err := NewAccountWithSigner(org)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	if acca := acc.Address(); !acca.Equal(addr) {
-		return nil, nil, fmt.Errorf("identity and signer public key mismatch, %v != %v", acca, addr)
+		return nil, nil, "", fmt.Errorf("identity and signer public key mismatch, %v != %v", acca, addr)
 	}
 
 	// Create a Gateway connection for a specific client identity
@@ -150,7 +149,8 @@ func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.
 		client.WithSubmitTimeout(5*time.Second),
 		client.WithCommitStatusTimeout(1*time.Minute),
 	)
-	return gw, acc, err
+
+	return gw, acc, onChainID, err
 }
 
 // FatalErr prints msg followed by err and then exits the program immediately, if

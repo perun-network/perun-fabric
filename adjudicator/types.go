@@ -140,9 +140,9 @@ func (s *StateReg) Clone() *StateReg {
 	}
 }
 
-func (s *StateReg) Equal(_s StateReg) bool {
-	err := s.CoreState().Equal(_s.CoreState())
-	return err == nil && s.Timeout.Equal(_s.Timeout)
+func (s *StateReg) Equal(sr StateReg) bool {
+	err := s.CoreState().Equal(sr.CoreState())
+	return err == nil && s.Timeout.Equal(sr.Timeout)
 }
 
 func (s *StateReg) IsFinalizedAt(ts Timestamp) bool {

@@ -20,10 +20,18 @@ func stringWithErr(s fmt.Stringer, err error) (string, error) {
 	return s.String(), nil
 }
 
+func UnmarshalID(idStr string) (string, error) {
+	id := ""
+	if err := json.Unmarshal([]byte(idStr), &id); err != nil {
+		return id, fmt.Errorf("json-unmarshaling Client ID: %w", err)
+	}
+	return id, nil
+}
+
 func UnmarshalAddress(addrStr string) (wallet.Address, error) {
 	addr := wallet.NewAddress()
-	if err := json.Unmarshal([]byte(addrStr), addr); err != nil {
-		return nil, fmt.Errorf("json-unmarshaling Address: %w", err)
+	if err := json.Unmarshal([]byte(addrStr), &addr); err != nil {
+		return addr, fmt.Errorf("json-unmarshaling Farbic Address: %w", err)
 	}
 	return addr, nil
 }

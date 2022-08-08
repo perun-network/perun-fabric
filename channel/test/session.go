@@ -24,6 +24,7 @@ import (
 )
 
 type Session struct {
+	ClientID    string
 	Adjudicator *channel.Adjudicator
 	Binding     *binding.Adjudicator
 	Funder      *channel.Funder
@@ -39,7 +40,7 @@ func NewTestSession(org Org, adjudicator string) (_ *Session, err error) {
 	}
 
 	// Create a Gateway connection for a specific client identity
-	gateway, acc, err := NewGateway(org, clientConn)
+	gateway, acc, clientID, err := NewGateway(org, clientConn)
 	if err != nil {
 		clientConn.Close()
 		return nil, fmt.Errorf("connecting to gateway: %w", err)
@@ -47,6 +48,7 @@ func NewTestSession(org Org, adjudicator string) (_ *Session, err error) {
 
 	network := gateway.GetNetwork(ChannelName)
 	return &Session{
+		ClientID:    clientID,
 		Adjudicator: channel.NewAdjudicator(network, adjudicator),
 		Binding:     binding.NewAdjudicatorBinding(network, adjudicator),
 		Funder:      channel.NewFunder(network, adjudicator),

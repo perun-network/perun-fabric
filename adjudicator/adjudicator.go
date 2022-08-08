@@ -13,16 +13,18 @@ import (
 // Adjudicator is an abstract implementation of the adjudicator smart
 // contract.
 type Adjudicator struct {
-	ledger   Ledger
-	asset    Asset
-	holdings *AssetHolder
+	ledger     Ledger
+	asset      Asset
+	holdings   *AssetHolder
+	identifier string
 }
 
-func NewAdjudicator(ledger Ledger, asset Asset) *Adjudicator {
+func NewAdjudicator(id string, ledger Ledger, asset Asset) *Adjudicator {
 	return &Adjudicator{
-		ledger:   ledger,
-		asset:    asset,
-		holdings: NewAssetHolder(ledger),
+		ledger:     ledger,
+		asset:      asset,
+		holdings:   NewAssetHolder(ledger),
+		identifier: id,
 	}
 }
 
@@ -129,7 +131,7 @@ func (a *Adjudicator) StateReg(id channel.ID) (*StateReg, error) {
 
 // Withdraw withdraws all funds of participant part in the finalized channel id
 // to themself via the AssetHolder. It returns the withdrawn amount.
-func (a *Adjudicator) Withdraw(id channel.ID, part wallet.Address) (*big.Int, error) {
+func (a *Adjudicator) Withdraw(callee string, id channel.ID, part wallet.Address) (*big.Int, error) { // TODO: Remove callee for signed request.
 	if reg, err := a.StateReg(id); err != nil {
 		return nil, err
 	} else if now := a.ledger.Now(); !reg.IsFinalizedAt(now) {
@@ -146,7 +148,9 @@ func (a *Adjudicator) Withdraw(id channel.ID, part wallet.Address) (*big.Int, er
 	}
 
 	// Send funds back to participant.
-	err = a.asset.ChannelToAddressTransfer(id, part, holding)
+	// TODO: Get ID to send funds back to from signed request.
+	// TODO: Check if signature is valid in regard to the participant address!
+	err = a.asset.Transfer(a.identifier, callee, holding)
 	if err != nil {
 		return nil, err
 	}
@@ -177,12 +181,9 @@ func ValidateChannel(ch *SignedChannel) error {
 	return nil
 }
 
-// Connect AssetHolder:
-// These functions must be called via the Adjudicator to store states/holdings on the same HoldingLedger.
-
-func (a *Adjudicator) Deposit(partID string, chID channel.ID, part wallet.Address, amount *big.Int) error {
+func (a *Adjudicator) Deposit(calleeID string, chID channel.ID, part wallet.Address, amount *big.Int) error {
 	// Transfer funds to channel.
-	err := a.asset.AddressToChannelTransfer(partID, part, chID, amount)
+	err := a.asset.Transfer(calleeID, a.identifier, amount)
 	if err != nil {
 		return err
 	}
@@ -191,7 +192,7 @@ func (a *Adjudicator) Deposit(partID string, chID channel.ID, part wallet.Addres
 	err = a.holdings.Deposit(chID, part, amount)
 	if err != nil {
 		// Ensure funds not stuck in channel if deposit fails.
-		transferErr := a.asset.ChannelToAddressTransfer(chID, part, amount)
+		transferErr := a.asset.Transfer(a.identifier, calleeID, amount)
 		if err != nil {
 			return transferErr
 		}
@@ -207,32 +208,18 @@ func (a *Adjudicator) TotalHolding(id channel.ID, parts []wallet.Address) (*big.
 	return a.holdings.TotalHolding(id, parts)
 }
 
-// Connect Demo Asset:
-
-func (a *Adjudicator) Mint(identity string, addr wallet.Address, amount *big.Int) error {
-	return a.asset.Mint(identity, addr, amount)
+func (a *Adjudicator) Mint(calleeID string, amount *big.Int) error {
+	return a.asset.Mint(calleeID, amount)
 }
 
-func (a *Adjudicator) Burn(identity string, addr wallet.Address, amount *big.Int) error {
-	return a.asset.Burn(identity, addr, amount)
+func (a *Adjudicator) Burn(calleeID string, amount *big.Int) error {
+	return a.asset.Burn(calleeID, amount)
 }
 
-func (a *Adjudicator) AddressToAddressTransfer(identity string, sender wallet.Address, receiver wallet.Address, amount *big.Int) error {
-	return a.asset.AddressToAddressTransfer(identity, sender, receiver, amount)
+func (a *Adjudicator) Transfer(senderID string, receiverID string, amount *big.Int) error {
+	return a.asset.Transfer(senderID, receiverID, amount)
 }
 
-func (a *Adjudicator) AddressToChannelTransfer(identity string, sender wallet.Address, receiver channel.ID, amount *big.Int) error {
-	return a.asset.AddressToChannelTransfer(identity, sender, receiver, amount)
-}
-
-func (a *Adjudicator) BalanceOfAddress(address wallet.Address) (*big.Int, error) {
-	return a.asset.BalanceOfAddress(address)
-}
-
-func (a *Adjudicator) RegisterAddress(identity string, addr wallet.Address) error {
-	return a.asset.RegisterAddress(identity, addr)
-}
-
-func (a *Adjudicator) GetAddressIdentity(addr wallet.Address) (string, error) {
-	return a.asset.GetAddressIdentity(addr)
+func (a *Adjudicator) BalanceOfID(userID string) (*big.Int, error) {
+	return a.asset.BalanceOf(userID)
 }

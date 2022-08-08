@@ -4,11 +4,12 @@ package test
 
 import (
 	"fmt"
+	chtest "github.com/perun-network/perun-fabric/channel/test"
 	"math/big"
 	"math/rand"
 
 	"perun.network/go-perun/channel"
-	chtest "perun.network/go-perun/channel/test"
+	"perun.network/go-perun/channel/test"
 	"perun.network/go-perun/wallet"
 	wtest "perun.network/go-perun/wallet/test"
 
@@ -78,12 +79,12 @@ func NewSetup(rng *rand.Rand, opts ...SetupOption) *Setup {
 		State: &adj.State{
 			ID:       params.ID(),
 			Version:  0,
-			Balances: chtest.NewRandomBals(rng, 2),
+			Balances: test.NewRandomBals(rng, 2),
 			IsFinal:  false,
 			Now:      ledger.Now(),
 		},
 		Ledger:  ledger,
-		Adj:     adj.NewAdjudicator(ledger, asset),
+		Adj:     adj.NewAdjudicator(chtest.AdjudicatorName, ledger, asset),
 		Timeout: ledger.Now().Add(params.ChallengeDuration),
 	}
 
@@ -144,7 +145,7 @@ func WithMintedTokens(fund ...*big.Int) SetupOption {
 		}
 
 		for i, part := range s.Parts {
-			_ = s.Adj.Mint("", part, fund[i])
+			_ = s.Adj.Mint(part.String(), fund[i])
 		}
 	})
 }
@@ -152,8 +153,8 @@ func WithMintedTokens(fund ...*big.Int) SetupOption {
 var Funded = setupModifier(func(s *Setup) {
 	id := s.State.ID
 	for i, part := range s.Parts {
-		_ = s.Adj.Mint("", part, s.State.Balances[i])
-		if err := s.Adj.Deposit("", id, part, s.State.Balances[i]); err != nil {
+		_ = s.Adj.Mint(part.String(), s.State.Balances[i])
+		if err := s.Adj.Deposit(part.String(), id, part, s.State.Balances[i]); err != nil {
 			panic(fmt.Sprintf("Setup: error funding participant[%d]: %v", i, err))
 		}
 	}

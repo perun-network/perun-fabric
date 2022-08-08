@@ -21,10 +21,8 @@ const (
 	txWithdraw          = "Withdraw"
 	txMintT             = "MintToken"
 	txBurnT             = "BurnToken"
-	txTToAddr           = "TokenToAddressTransfer"
+	txTToAddr           = "TransferToken"
 	txTBal              = "TokenBalance"
-	txRegAddr           = "RegisterAddress"
-	txGetId             = "GetAddressIdentity"
 	submitRetryDuration = 1 * time.Second
 )
 
@@ -93,26 +91,26 @@ func (a *Adjudicator) Withdraw(id channel.ID, part wallet.Address) (*big.Int, er
 	return bigIntWithError(a.submitTransactionWithRetry(txWithdraw, args...))
 }
 
-func (a *Adjudicator) MintToken(addr wallet.Address, amount *big.Int) error {
-	args, err := pkgjson.MultiMarshal(addr, amount)
+func (a *Adjudicator) MintToken(amount *big.Int) error {
+	arg, err := json.Marshal(amount)
 	if err != nil {
 		return err
 	}
-	_, err = a.submitTransactionWithRetry(txMintT, args...)
+	_, err = a.submitTransactionWithRetry(txMintT, string(arg))
 	return err
 }
 
-func (a *Adjudicator) BurnToken(addr wallet.Address, amount *big.Int) error {
-	args, err := pkgjson.MultiMarshal(addr, amount)
+func (a *Adjudicator) BurnToken(amount *big.Int) error {
+	arg, err := json.Marshal(amount)
 	if err != nil {
 		return err
 	}
-	_, err = a.submitTransactionWithRetry(txBurnT, args...)
+	_, err = a.submitTransactionWithRetry(txBurnT, string(arg))
 	return err
 }
 
-func (a *Adjudicator) TokenToAddressTransfer(sender wallet.Address, receiver wallet.Address, amount *big.Int) error {
-	args, err := pkgjson.MultiMarshal(sender, receiver, amount)
+func (a *Adjudicator) TokenTransfer(receiverID string, amount *big.Int) error {
+	args, err := pkgjson.MultiMarshal(receiverID, amount)
 	if err != nil {
 		return err
 	}
@@ -120,29 +118,12 @@ func (a *Adjudicator) TokenToAddressTransfer(sender wallet.Address, receiver wal
 	return err
 }
 
-func (a *Adjudicator) TokenBalance(addr wallet.Address) (*big.Int, error) {
-	args, err := pkgjson.MultiMarshal(addr)
+func (a *Adjudicator) TokenBalance(ownerID string) (*big.Int, error) {
+	arg, err := json.Marshal(ownerID)
 	if err != nil {
 		return nil, err
 	}
-	return bigIntWithError(a.submitTransactionWithRetry(txTBal, args...))
-}
-
-func (a *Adjudicator) RegisterAddress(addr wallet.Address) error {
-	args, err := pkgjson.MultiMarshal(addr)
-	if err != nil {
-		return err
-	}
-	_, err = a.submitTransactionWithRetry(txRegAddr, args...)
-	return err
-}
-
-func (a *Adjudicator) GetAddressIdentity(addr wallet.Address) (string, error) {
-	args, err := pkgjson.MultiMarshal(addr)
-	if err != nil {
-		return "", err
-	}
-	return stringWithError(a.submitTransactionWithRetry(txGetId, args...))
+	return bigIntWithError(a.submitTransactionWithRetry(txTBal, string(arg)))
 }
 
 // submitTransactionWithRetry ensures that in case of a missed lock on the contract there is
@@ -166,13 +147,4 @@ func bigIntWithError(b []byte, err error) (*big.Int, error) {
 
 	bi := new(big.Int)
 	return bi, json.Unmarshal(b, bi)
-}
-
-func stringWithError(b []byte, err error) (string, error) {
-	if err != nil {
-		return "", err
-	}
-
-	str := new(string)
-	return *str, json.Unmarshal(b, str)
 }

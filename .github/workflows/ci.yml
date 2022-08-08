@@ -45,9 +45,9 @@ jobs:
       - name: Setup and Run Tests
         run: |
           cd ..
-          curl -sSL https://bit.ly/2ysbOFE | bash -s
+          curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/master/scripts/bootstrap.sh | bash -s
           export FABRIC_SAMPLES_DIR=$(pwd)/fabric-samples/
           cd perun-fabric/
           ./scripts/deployCC.sh
-          go test -timeout 700s ./...
+          go test -timeout 700s ./... -p 1
           ./scripts/network.sh down

@@ -27,7 +27,6 @@ func TestTimeout(t *testing.T) {
 	polling := duration
 
 	t.Run("Elapsed", func(t *testing.T) {
-
 		t0 := channel.MakeTimeout(duration, polling)
 		assert.False(t, t0.IsElapsed(context.Background()))
 

@@ -17,7 +17,6 @@ package assetholder_test
 import (
 	"github.com/perun-network/perun-fabric/channel/binding"
 	"github.com/perun-network/perun-fabric/channel/test"
-	"log"
 	"math/big"
 	"testing"
 
@@ -35,7 +34,7 @@ func TestAssetholder(t *testing.T) {
 	defer clientConn.Close()
 
 	// Create a Gateway connection for a specific client identity
-	gateway, acc, err := test.NewGateway(org, clientConn)
+	gateway, acc, _, err := test.NewGateway(org, clientConn)
 	test.FatalErr("connecting to gateway", err)
 	defer gateway.Close()
 
@@ -45,26 +44,21 @@ func TestAssetholder(t *testing.T) {
 	rng := ptest.Prng(ptest.NameStr("FabricAssetHolder"))
 	id, addr := chtest.NewRandomChannelID(rng), acc.Address()
 	holding := big.NewInt(rng.Int63())
-	log.Printf("Depositing: funding id: (%x, %v), amount: %v", id, addr, holding)
 	test.FatalClientErr("sending Deposit tx", ah.Deposit(id, addr, holding))
 
 	holding1, err := ah.Holding(id, addr)
 	test.FatalClientErr("querying holding", err)
-	log.Printf("Querying holding: %v", holding1)
 	test.RequireEqual(holding, holding1, "Holding")
 
 	total, err := ah.TotalHolding(id, []wallet.Address{addr})
 	test.FatalClientErr("querying total holding", err)
-	log.Printf("Querying total holding: %v", total)
 	test.RequireEqual(holding, total, "Holding")
 
 	withdrawn, err := ah.Withdraw(id, addr)
 	test.FatalClientErr("withdrawing", err)
-	log.Printf("Withdrawing: %v", withdrawn)
 	test.RequireEqual(holding, withdrawn, "Withdraw")
 
 	holding2, err := ah.Holding(id, addr)
 	test.FatalClientErr("querying holding", err)
-	log.Printf("Querying holding after withdrawal: %v", holding2)
-	test.RequireEqual(new(big.Int), holding1, "Holding after withdrawal")
+	test.RequireEqual(new(big.Int), holding2, "Holding after withdrawal")
 }
