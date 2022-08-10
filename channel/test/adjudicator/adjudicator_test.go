@@ -172,7 +172,7 @@ func withSubscriptionDispute(t *testing.T) {
 	// Adjudicator: Register version 1.
 	setup.State.Version = 1
 	setup.State.IsFinal = false
-	setup.State.Balances = []pchannel.Bal{big.NewInt(450), big.NewInt(50)}
+	setup.State.Balances = []pchannel.Bal{big.NewInt(350), big.NewInt(150)}
 	ch = setup.SignedChannel()
 	{
 		req := pchannel.AdjudicatorReq{

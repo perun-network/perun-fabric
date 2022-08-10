@@ -71,8 +71,8 @@ func (s StubAsset) Burn(id string, amount *big.Int) error {
 
 func (s StubAsset) Transfer(id string, receiver string, amount *big.Int) error {
 	// Check zero/negative amount.
-	if amount.Cmp(big.NewInt(0)) <= 0 {
-		return fmt.Errorf("cannot transfer zero/negative amount")
+	if amount.Cmp(big.NewInt(0)) < 0 {
+		return fmt.Errorf("cannot transfer negative amount")
 	}
 
 	// Get balances of parties.

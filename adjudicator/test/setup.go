@@ -81,7 +81,6 @@ func NewSetup(rng *rand.Rand, opts ...SetupOption) *Setup {
 			Version:  0,
 			Balances: test.NewRandomBals(rng, 2),
 			IsFinal:  false,
-			Now:      ledger.Now(),
 		},
 		Ledger:  ledger,
 		Adj:     adj.NewAdjudicator(chtest.AdjudicatorName, ledger, asset),

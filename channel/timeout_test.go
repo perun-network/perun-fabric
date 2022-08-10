@@ -27,7 +27,8 @@ func TestTimeout(t *testing.T) {
 	polling := duration
 
 	t.Run("Elapsed", func(t *testing.T) {
-		t0 := channel.MakeTimeout(duration, polling)
+		timeout := time.Now().UTC().Add(duration)
+		t0 := channel.MakeTimeout(timeout, polling)
 		assert.False(t, t0.IsElapsed(context.Background()))
 
 		time.Sleep(duration)
@@ -35,7 +36,8 @@ func TestTimeout(t *testing.T) {
 	})
 
 	t.Run("Wait", func(t *testing.T) {
-		t0 := channel.MakeTimeout(duration, polling)
+		timeout := time.Now().UTC().Add(duration)
+		t0 := channel.MakeTimeout(timeout, polling)
 		assert.False(t, t0.IsElapsed(context.Background()))
 
 		err := t0.Wait(context.Background())
@@ -47,7 +49,8 @@ func TestTimeout(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), duration/2)
 		defer cancel()
 
-		t0 := channel.MakeTimeout(duration, polling)
+		timeout := time.Now().UTC().Add(duration)
+		t0 := channel.MakeTimeout(timeout, polling)
 		assert.False(t, t0.IsElapsed(context.Background()))
 
 		err := t0.Wait(ctx)

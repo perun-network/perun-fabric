@@ -97,9 +97,7 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 			return fmt.Errorf("invalid adjudicator request")
 		}
 
-		duration := reg.Timeout.Time().Sub(reg.Now.Time())
-		timeout := MakeTimeout(duration, a.polling)
-
+		timeout := MakeTimeout(reg.Timeout.Time(), a.polling)
 		err = timeout.Wait(ctx)
 		if err != nil {
 			return err
@@ -127,7 +125,7 @@ func (a *Adjudicator) Progress(ctx context.Context, req channel.ProgressReq) err
 // framework will call Close on the subscription once the respective channel
 // controller shuts down.
 func (a *Adjudicator) Subscribe(ctx context.Context, ch channel.ID) (channel.AdjudicatorSubscription, error) {
-	sub, err := NewEventSubscription(ctx, a, ch)
+	sub, err := NewEventSubscription(a, ch)
 	if err != nil {
 		return nil, fmt.Errorf("subscribe: %w", err)
 	}

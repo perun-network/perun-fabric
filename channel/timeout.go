@@ -21,24 +21,23 @@ import (
 
 // Timeout represents a timeout that is bound to block time.
 type Timeout struct {
-	timeout time.Time
-	polling time.Duration
+	timeout time.Time     // timeout is the time representing the timeout in UTC.
+	polling time.Duration // polling is used to periodically check if the timeout elapsed.
 }
 
-// MakeTimeout generates a timeout based on the given duration and the current time.
-func MakeTimeout(duration time.Duration, polling time.Duration) *Timeout {
-	t := time.Now().Add(duration)
-
+// MakeTimeout generates a timeout with the given time as wall.
+// Timeout is expected to be given in UTC.
+func MakeTimeout(t time.Time, polling time.Duration) *Timeout {
 	return &Timeout{
-		timeout: t,       // timeout is the time representing the timeout
-		polling: polling, // polling is used to periodically check if the timeout is concluded
+		timeout: t,
+		polling: polling,
 	}
 }
 
 // IsElapsed should return whether the timeout has concluded at the time of the call of this method.
 func (t *Timeout) IsElapsed(ctx context.Context) bool {
-	current := time.Now()           // Fabric does not have a block time.
-	return current.After(t.timeout) // Instead, use the system time to compare against.
+	current := time.Now().UTC()     // Fabric does not have a block time.
+	return current.After(t.timeout) // Instead, use the UTC system time to compare against.
 }
 
 // Wait waits for the timeout to elapse.

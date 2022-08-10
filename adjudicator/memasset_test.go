@@ -76,7 +76,7 @@ func TestMemAsset(t *testing.T) {
 		require.Equal(expectedBal, bal)
 	})
 
-	t.Run("Transfer-zero", func(t *testing.T) {
+	t.Run("Transfer-negative", func(t *testing.T) {
 		require := require.New(t)
 		ma := adj.NewMemAsset()
 		addrOne := wallet.NewRandomAccount(rng).Address().String()
@@ -87,7 +87,7 @@ func TestMemAsset(t *testing.T) {
 		require.NoError(ma.Mint(addrTwo, big.NewInt(150)))
 
 		// Transfer (incremental).
-		require.Error(ma.Transfer(addrOne, addrTwo, big.NewInt(0)))
+		require.Error(ma.Transfer(addrOne, addrTwo, big.NewInt(-1)))
 
 		// Check balance of address one.
 		expectedBal := big.NewInt(150)

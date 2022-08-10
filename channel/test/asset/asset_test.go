@@ -36,7 +36,7 @@ func TestStubAsset(t *testing.T) {
 		mintingBal := big.NewInt(100)
 
 		// Get current token balance.
-		bal, err := sessions[0].Binding.TokenBalance(sessions[0].ClientID)
+		bal, err := sessions[0].Binding.TokenBalance(sessions[0].ClientFabricID)
 		req.NoError(t, err)
 
 		// Mint tokens.
@@ -44,7 +44,7 @@ func TestStubAsset(t *testing.T) {
 		req.NoError(t, err)
 
 		// Get current token balance. Expected to be the minted amount.
-		newBal, err := sessions[0].Binding.TokenBalance(sessions[0].ClientID)
+		newBal, err := sessions[0].Binding.TokenBalance(sessions[0].ClientFabricID)
 		req.NoError(t, err)
 
 		// Calculate expected balance.
@@ -59,7 +59,7 @@ func TestStubAsset(t *testing.T) {
 		mintingBal := big.NewInt(100)
 
 		// Get current token balance.
-		bal, err := sessions[1].Binding.TokenBalance(sessions[1].ClientID)
+		bal, err := sessions[1].Binding.TokenBalance(sessions[1].ClientFabricID)
 		req.NoError(t, err)
 
 		// Mint tokens.
@@ -67,7 +67,7 @@ func TestStubAsset(t *testing.T) {
 		req.Error(t, err)
 
 		// Get current token balance. Expected to be the minted amount.
-		newBal, err := sessions[1].Binding.TokenBalance(sessions[1].ClientID)
+		newBal, err := sessions[1].Binding.TokenBalance(sessions[1].ClientFabricID)
 		req.NoError(t, err)
 
 		// We expect no change in balance.
@@ -76,74 +76,74 @@ func TestStubAsset(t *testing.T) {
 
 	t.Run("Transfer-Valid", func(t *testing.T) {
 		// Get current balances.
-		balAlice, err := sessions[0].Binding.TokenBalance(sessions[0].ClientID)
+		balAlice, err := sessions[0].Binding.TokenBalance(sessions[0].ClientFabricID)
 		req.NoError(t, err)
-		balBob, err := sessions[1].Binding.TokenBalance(sessions[1].ClientID)
+		balBob, err := sessions[1].Binding.TokenBalance(sessions[1].ClientFabricID)
 		req.NoError(t, err)
 
 		// Transfer 100.
 		transfer := big.NewInt(100)
-		err = sessions[0].Binding.TokenTransfer(sessions[1].ClientID, transfer)
+		err = sessions[0].Binding.TokenTransfer(sessions[1].ClientFabricID, transfer)
 		req.NoError(t, err)
 
 		// Check that balances changed as expected.
-		bal, err := sessions[0].Binding.TokenBalance(sessions[0].ClientID)
+		bal, err := sessions[0].Binding.TokenBalance(sessions[0].ClientFabricID)
 		req.NoError(t, err)
 		req.Equal(t, balAlice.Sub(balAlice, transfer), bal)
 
-		bal, err = sessions[1].Binding.TokenBalance(sessions[1].ClientID)
+		bal, err = sessions[1].Binding.TokenBalance(sessions[1].ClientFabricID)
 		req.NoError(t, err)
 		req.Equal(t, balBob.Add(balBob, transfer), bal)
 	})
 
-	t.Run("Transfer-Zero-Invalid", func(t *testing.T) {
+	t.Run("Transfer-Negative-Invalid", func(t *testing.T) {
 		// Get current balances.
-		balAlice, err := sessions[0].Binding.TokenBalance(sessions[0].ClientID)
+		balAlice, err := sessions[0].Binding.TokenBalance(sessions[0].ClientFabricID)
 		req.NoError(t, err)
-		balBob, err := sessions[1].Binding.TokenBalance(sessions[1].ClientID)
+		balBob, err := sessions[1].Binding.TokenBalance(sessions[1].ClientFabricID)
 		req.NoError(t, err)
 
 		// Transfer zero. Expect error.
-		transfer := big.NewInt(0)
-		err = sessions[0].Binding.TokenTransfer(sessions[1].ClientID, transfer)
+		transfer := big.NewInt(-1)
+		err = sessions[0].Binding.TokenTransfer(sessions[1].ClientFabricID, transfer)
 		req.Error(t, err)
 
 		// Ensure balances did not change.
-		bal, err := sessions[0].Binding.TokenBalance(sessions[0].ClientID)
+		bal, err := sessions[0].Binding.TokenBalance(sessions[0].ClientFabricID)
 		req.NoError(t, err)
 		req.Equal(t, balAlice, bal)
-		bal, err = sessions[1].Binding.TokenBalance(sessions[1].ClientID)
+		bal, err = sessions[1].Binding.TokenBalance(sessions[1].ClientFabricID)
 		req.NoError(t, err)
 		req.Equal(t, balBob, bal)
 	})
 
 	t.Run("Transfer-Limit-Invalid", func(t *testing.T) {
 		// Get current balances.
-		balAlice, err := sessions[0].Binding.TokenBalance(sessions[0].ClientID)
+		balAlice, err := sessions[0].Binding.TokenBalance(sessions[0].ClientFabricID)
 		req.NoError(t, err)
-		balBob, err := sessions[1].Binding.TokenBalance(sessions[1].ClientID)
+		balBob, err := sessions[1].Binding.TokenBalance(sessions[1].ClientFabricID)
 		req.NoError(t, err)
 
 		// Transfer amount higher than Alice's funds. Expect error.
 		transfer := big.NewInt(0)
 		transfer.Add(balAlice, big.NewInt(1))
-		err = sessions[0].Binding.TokenTransfer(sessions[1].ClientID, transfer)
+		err = sessions[0].Binding.TokenTransfer(sessions[1].ClientFabricID, transfer)
 		req.Error(t, err)
 
 		// Ensure balances did not change.
-		bal, err := sessions[0].Binding.TokenBalance(sessions[0].ClientID)
+		bal, err := sessions[0].Binding.TokenBalance(sessions[0].ClientFabricID)
 		req.NoError(t, err)
 		req.Equal(t, balAlice, bal)
-		bal, err = sessions[1].Binding.TokenBalance(sessions[1].ClientID)
+		bal, err = sessions[1].Binding.TokenBalance(sessions[1].ClientFabricID)
 		req.NoError(t, err)
 		req.Equal(t, balBob, bal)
 	})
 
 	t.Run("Burn", func(t *testing.T) {
 		// Get current balances.
-		initBalAlice, err := sessions[0].Binding.TokenBalance(sessions[0].ClientID)
+		initBalAlice, err := sessions[0].Binding.TokenBalance(sessions[0].ClientFabricID)
 		req.NoError(t, err)
-		initBalBob, err := sessions[1].Binding.TokenBalance(sessions[1].ClientID)
+		initBalBob, err := sessions[1].Binding.TokenBalance(sessions[1].ClientFabricID)
 		req.NoError(t, err)
 
 		// Burn tokens.
@@ -155,10 +155,10 @@ func TestStubAsset(t *testing.T) {
 		expBalAlice.Sub(initBalAlice, burnAmount)
 
 		// Ensure balances changed accordingly.
-		newBalAlice, err := sessions[0].Binding.TokenBalance(sessions[0].ClientID)
+		newBalAlice, err := sessions[0].Binding.TokenBalance(sessions[0].ClientFabricID)
 		req.NoError(t, err)
 		req.Equal(t, expBalAlice, newBalAlice)
-		newBalBob, err := sessions[1].Binding.TokenBalance(sessions[1].ClientID)
+		newBalBob, err := sessions[1].Binding.TokenBalance(sessions[1].ClientFabricID)
 		req.NoError(t, err)
 		req.Equal(t, initBalBob, newBalBob)
 	})

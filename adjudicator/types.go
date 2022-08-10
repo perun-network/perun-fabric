@@ -1,9 +1,13 @@
 package adjudicator
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
+	"io"
 	"math/big"
+	"perun.network/go-perun/wire/perunio"
 
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
@@ -18,7 +22,6 @@ type (
 
 	State struct {
 		ID       channel.ID    `json:"id"`
-		Now      Timestamp     `json:"now"`
 		Version  uint64        `json:"version"`
 		Balances []channel.Bal `json:"balances"`
 		IsFinal  bool          `json:"final"`
@@ -28,6 +31,17 @@ type (
 		Params Params       `json:"params"`
 		State  State        `json:"state"`
 		Sigs   []wallet.Sig `json:"sigs"`
+	}
+
+	WithdrawReq struct {
+		ID       channel.ID     `json:"id"`
+		Part     wallet.Address `json:"part"`
+		Receiver string         `json:"receiver"`
+	}
+
+	SignedWithdrawReq struct {
+		Req WithdrawReq `json:"req"`
+		Sig wallet.Sig  `json:"sig"`
 	}
 
 	StateReg struct {
@@ -200,4 +214,76 @@ func ConvertToSignedChannel(req channel.AdjudicatorReq) (*SignedChannel, error) 
 		State:  state,
 		Sigs:   req.Tx.Sigs,
 	}, nil
+}
+
+func SignWithdrawRequest(acc wallet.Account, channel channel.ID, receiver string) (*SignedWithdrawReq, error) {
+	req := WithdrawReq{
+		ID:       channel,
+		Part:     acc.Address(),
+		Receiver: receiver,
+	}
+
+	sig, err := req.Sign(acc)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SignedWithdrawReq{
+		Req: req,
+		Sig: sig,
+	}, nil
+}
+
+func (wr *WithdrawReq) UnmarshalJSON(data []byte) error {
+	var wrj struct {
+		ID       channel.ID      `json:"id"`
+		Part     json.RawMessage `json:"part"`
+		Receiver string          `json:"receiver"`
+	}
+	if err := json.Unmarshal(data, &wrj); err != nil {
+		return err
+	}
+
+	wr.ID = wrj.ID
+	wr.Receiver = wrj.Receiver
+
+	part := wallet.NewAddress()
+	parti := part.(interface{})
+	if err := json.Unmarshal(wrj.Part, &parti); err != nil {
+		return fmt.Errorf("unmarshaling part: %w", err)
+	}
+	wr.Part = part
+	return nil
+}
+
+// Sign signs a withdraw request with the given Account.
+// Returns the signature or an error.
+func (wr WithdrawReq) Sign(acc wallet.Account) (wallet.Sig, error) {
+	var buf bytes.Buffer
+	if err := wr.Encode(&buf); err != nil {
+		return nil, fmt.Errorf("encoding WithdrawReq: %w", err)
+	}
+	return acc.SignData(buf.Bytes())
+}
+
+// Verify verifies that the provided signature on the signed withdraw request belongs to the
+// provided address.
+func (swr SignedWithdrawReq) Verify(addr wallet.Address) (bool, error) {
+	var buf bytes.Buffer
+	if err := swr.Req.Encode(&buf); err != nil {
+		return false, fmt.Errorf("encoding WithdrawReq: %w", err)
+	}
+	return wallet.VerifySignature(buf.Bytes(), swr.Sig, addr)
+}
+
+// Encode encodes a withdraw request into an `io.Writer` or returns an `error`.
+func (wr WithdrawReq) Encode(w io.Writer) error {
+	return errors.WithMessage(
+		perunio.Encode(w, wr.ID, wr.Part, wr.Receiver), "WithdrawReq encode")
+}
+
+// Decode decodes a withdraw request from an `io.Reader` or returns an `error`.
+func (wr WithdrawReq) Decode(r io.Reader) error {
+	return errors.WithMessage(
+		perunio.Decode(r, &wr.ID, &wr.Part, &wr.Receiver), "WithdrawReq decode")
 }

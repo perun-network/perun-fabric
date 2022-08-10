@@ -38,7 +38,7 @@ func TestAdjudicator(t *testing.T) {
 		require.Zero(th.Sign())
 
 		// Deposit twice each to test additivity.
-		// partID in the local case not necessary.
+		// As the client identification the participant address (string) is used.
 		for i := 0; i < 2; i++ {
 			require.NoError(s.Adj.Deposit(s.Params.Parts[i].String(), s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
 			require.NoError(s.Adj.Deposit(s.Params.Parts[i].String(), s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
@@ -181,13 +181,65 @@ func TestAdjudicator(t *testing.T) {
 		s.Ledger.AdvanceNow(s.Params.ChallengeDuration + 1)
 
 		for i := 0; i < 2; i++ {
-			_, err := s.Adj.Withdraw(s.Parts[i].String(), s.State.ID, s.Parts[i])
+			req, err := adj.SignWithdrawRequest(s.Accs[i], adjsr.ID, s.Parts[i].String())
+			require.NoError(err)
+			_, err = s.Adj.Withdraw(*req)
 			require.NoError(err)
 		}
 
 		// Token balance for parts must be the original value.
 		for i := 0; i < 2; i++ {
-			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String()) // TODO: Fix parts
+			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String())
+			require.Equal(s.State.Balances[i], bal)
+			require.NoError(err)
+		}
+	})
+
+	t.Run("Withdraw-invalid-sig", func(t *testing.T) {
+		require := require.New(t)
+		s := adjtest.NewSetup(test.Prng(t), adjtest.Funded)
+
+		// Token balance for parts must be zero.
+		for i := 0; i < 2; i++ {
+			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String())
+			require.Equal(big.NewInt(0), bal)
+			require.NoError(err)
+		}
+
+		sr := s.StateReg()
+		ch := s.SignedChannel()
+		require.NoError(s.Adj.Register(ch))
+
+		adjsr, err := s.Adj.StateReg(s.State.ID)
+		require.NoError(err)
+		require.True(sr.Equal(*adjsr))
+		s.Ledger.AdvanceNow(s.Params.ChallengeDuration + 1)
+
+		// Party 0 tries to withdraw party 1's funds.
+		req, err := adj.SignWithdrawRequest(s.Accs[0], adjsr.ID, s.Parts[0].String())
+		require.NoError(err)
+		req.Req.Part = s.Accs[1].Address()
+		_, err = s.Adj.Withdraw(*req)
+		require.Error(err)
+
+		// Party 1 tries to withdraw party 0's funds.
+		req, err = adj.SignWithdrawRequest(s.Accs[1], adjsr.ID, s.Parts[1].String())
+		require.NoError(err)
+		req.Req.Part = s.Accs[0].Address()
+		_, err = s.Adj.Withdraw(*req)
+		require.Error(err)
+
+		// Check if valid withdraw still possible.
+		for i := 0; i < 2; i++ {
+			req, err := adj.SignWithdrawRequest(s.Accs[i], adjsr.ID, s.Parts[i].String())
+			require.NoError(err)
+			_, err = s.Adj.Withdraw(*req)
+			require.NoError(err)
+		}
+
+		// Token balance for parts must be the original value.
+		for i := 0; i < 2; i++ {
+			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String())
 			require.Equal(s.State.Balances[i], bal)
 			require.NoError(err)
 		}

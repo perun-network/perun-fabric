@@ -104,8 +104,6 @@ func (a *Adjudicator) updateHoldings(ch *SignedChannel) error {
 func (a *Adjudicator) saveStateReg(ch *SignedChannel) error {
 	// determine timeout by channel finality
 	to := a.ledger.Now()
-	ch.State.Now = to
-
 	if !ch.State.IsFinal {
 		to = to.Add(ch.Params.ChallengeDuration)
 	}
@@ -124,15 +122,13 @@ func (a *Adjudicator) StateReg(id channel.ID) (*StateReg, error) {
 	} else if err != nil {
 		return nil, fmt.Errorf("querying ledger: %w", err)
 	}
-
-	reg.State.Now = a.ledger.Now() // Add the ledger timestamp.
 	return reg, nil
 }
 
-// Withdraw withdraws all funds of participant part in the finalized channel id
-// to themself via the AssetHolder. It returns the withdrawn amount.
-func (a *Adjudicator) Withdraw(callee string, id channel.ID, part wallet.Address) (*big.Int, error) { // TODO: Remove callee for signed request.
-	if reg, err := a.StateReg(id); err != nil {
+// Withdraw withdraws all funds of participant Part in the finalized channel id
+// to the given Receiver. It returns the withdrawn amount.
+func (a *Adjudicator) Withdraw(swr SignedWithdrawReq) (*big.Int, error) {
+	if reg, err := a.StateReg(swr.Req.ID); err != nil {
 		return nil, err
 	} else if now := a.ledger.Now(); !reg.IsFinalizedAt(now) {
 		return nil, ChallengeTimeoutError{
@@ -141,16 +137,23 @@ func (a *Adjudicator) Withdraw(callee string, id channel.ID, part wallet.Address
 		}
 	}
 
+	// Verify signature.
+	sigValid, err := swr.Verify(swr.Req.Part)
+	if err != nil {
+		return nil, err
+	}
+	if !sigValid {
+		return nil, fmt.Errorf("withdraw request signature invalid")
+	}
+
 	// Withdraw from channel.
-	holding, err := a.holdings.Withdraw(id, part)
+	holding, err := a.holdings.Withdraw(swr.Req.ID, swr.Req.Part)
 	if err != nil {
 		return nil, err
 	}
 
-	// Send funds back to participant.
-	// TODO: Get ID to send funds back to from signed request.
-	// TODO: Check if signature is valid in regard to the participant address!
-	err = a.asset.Transfer(a.identifier, callee, holding)
+	// Send funds back.
+	err = a.asset.Transfer(a.identifier, swr.Req.Receiver, holding)
 	if err != nil {
 		return nil, err
 	}

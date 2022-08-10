@@ -27,26 +27,27 @@ import (
 
 // EventSubscription provides methods for consuming channel events.
 type EventSubscription struct {
-	adjudicator *Adjudicator    // adjudicator is the referenced adjudicator instance.
-	channelID   channel.ID      // channelID is the channel identifier.
-	prevState   adj.StateReg    // prevState is the previous channel state.
-	timeout     *Timeout        // timeout is the current Event timeout.
-	concluded   bool            // concluded indicates if a concluded event was created.
-	registered  bool            // registered indicates if any state has been registered on-chain.
-	err         chan error      // err forwards errors during event parsing.
-	once        sync.Once       // once used to close channels.
-	closed      bool            // closed indicates that the channel is closed.
-	ctx         context.Context // ctx is the context to establish the subscription.
+	adjudicator *Adjudicator // adjudicator is the referenced adjudicator instance.
+	channelID   channel.ID   // channelID is the channel identifier.
+	prevState   adj.StateReg // prevState is the previous channel state.
+	timeout     *Timeout     // timeout is the current Event timeout.
+	concluded   bool         // concluded indicates if a concluded event was created.
+	registered  bool         // registered indicates if any state has been registered on-chain.
+	err         chan error   // err forwards errors during event parsing.
+	quit        chan bool    // quit indicates that the sub got closed.
+	closed      bool         // closed indicates that the channel is closed.
+	once        sync.Once    // once used to close() channels.
+	mtx         sync.Mutex   // mtx secures against a Close() call during the evaluation of detectEvent().
 }
 
-func NewEventSubscription(ctx context.Context, a *Adjudicator, ch channel.ID) (*EventSubscription, error) {
+func NewEventSubscription(a *Adjudicator, ch channel.ID) (*EventSubscription, error) {
 	return &EventSubscription{
 		adjudicator: a,
 		channelID:   ch,
 		err:         make(chan error, 1),
+		quit:        make(chan bool, 1),
 		prevState:   adj.StateReg{},
 		timeout:     nil,
-		ctx:         ctx,
 	}, nil
 }
 
@@ -54,41 +55,15 @@ func NewEventSubscription(ctx context.Context, a *Adjudicator, ch channel.ID) (*
 // closed or any other error occurs, it returns nil.
 func (s *EventSubscription) Next() channel.AdjudicatorEvent {
 	for {
-		if s.closed {
-			return nil
-		}
-
-		// Get the on chain state.
-		d, err := s.getState()
+		event, err := s.detectEvent()
 		if err != nil {
-			s.err <- err
-			return nil
-		}
-
-		// Only progress if some state is registered.
-		if s.registered {
-			if !s.concluded {
-				// Check isFinal and timeout which can indicate a concluded event.
-				if d.IsFinal || s.timeoutElapsed() {
-					s.concluded = true // ConcludedEvent is only emitted once.
-					return s.makeConcludedEvent(d)
-				}
-
-				// Otherwise, check state change which indicates a registered event.
-				if !d.Equal(s.prevState) {
-					s.prevState = *d
-					return s.makeRegisteredEvent(d)
-				}
-			} else {
-				// There will be no further events because the ConcludedEvent got already returned.
-				s.err <- fmt.Errorf("already concluded")
-				return nil
-			}
+			return nil // Err is available in err chan if subscription is not closed.
+		} else if event != nil {
+			return event
 		}
 
 		select {
-		case <-s.ctx.Done():
-			s.err <- s.ctx.Err()
+		case <-s.quit:
 			return nil
 		case <-time.After(s.adjudicator.polling):
 		}
@@ -106,14 +81,62 @@ func (s *EventSubscription) Err() error {
 
 // Close closes the subscription.
 func (s *EventSubscription) Close() error {
-	s.once.Do(func() { close(s.err) })
-	s.closed = true
+	s.once.Do(func() {
+		s.mtx.Lock()
+		defer s.mtx.Unlock()
+
+		s.closed = true
+		close(s.quit)
+		close(s.err)
+	})
 	return nil
+}
+
+// detectEvent compares the previous and current state of the channel to derive new chain events.
+func (s *EventSubscription) detectEvent() (channel.AdjudicatorEvent, error) {
+	// Lock to prevent closing during evaluation.
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	// Abort if subscription got closed.
+	if s.closed {
+		return nil, fmt.Errorf("subscription closed")
+	}
+
+	// Get the on chain state.
+	d, err := s.getState()
+	if err != nil {
+		s.err <- err
+		return nil, err
+	}
+
+	// Only progress if some state is registered.
+	if s.registered {
+		if !s.concluded {
+			// If channel isFinal or the timeout elapsed the channel is concluded.
+			if d.IsFinal || s.timeoutElapsed() {
+				s.concluded = true // ConcludedEvent is only emitted once.
+				return s.makeConcludedEvent(d), nil
+			}
+
+			// Otherwise, check state change which indicates a registered event.
+			if !d.Equal(s.prevState) {
+				s.prevState = *d
+				return s.makeRegisteredEvent(d), nil
+			}
+		} else {
+			// There will be no further events because the ConcludedEvent got already returned.
+			err = fmt.Errorf("already concluded")
+			s.err <- err
+			return nil, err
+		}
+	}
+	return nil, nil
 }
 
 // makeRegisteredEvent returns a new registered event dependent on the given state.
 func (s *EventSubscription) makeRegisteredEvent(d *adj.StateReg) channel.AdjudicatorEvent {
-	s.timeout = s.convertStateTimeout(d)
+	s.timeout = MakeTimeout(d.Timeout.Time(), s.adjudicator.polling)
 	state := d.State.CoreState()
 	cID := state.ID
 	v := state.Version
@@ -123,7 +146,7 @@ func (s *EventSubscription) makeRegisteredEvent(d *adj.StateReg) channel.Adjudic
 
 // makeConcludedEvent returns a new concluded or registered event dependent on the given state and timeout.
 func (s *EventSubscription) makeConcludedEvent(d *adj.StateReg) channel.AdjudicatorEvent {
-	s.timeout = s.convertStateTimeout(d)
+	s.timeout = MakeTimeout(d.Timeout.Time(), s.adjudicator.polling)
 	state := d.State.CoreState()
 	cID := state.ID
 	v := state.Version
@@ -137,12 +160,6 @@ func (s *EventSubscription) timeoutElapsed() bool {
 		return false
 	}
 	return s.timeout.IsElapsed(context.Background())
-}
-
-// convertStateTimeout converts the timeout to the client's system time.
-func (s *EventSubscription) convertStateTimeout(d *adj.StateReg) *Timeout {
-	timeoutDuration := d.Timeout.Time().Sub(d.State.Now.Time())
-	return MakeTimeout(timeoutDuration, s.adjudicator.polling)
 }
 
 // getState queries the current channel state from the ledger.

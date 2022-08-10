@@ -82,7 +82,7 @@ func (l *StubLedger) Now() adj.Timestamp {
 	if absDuration(now.Sub(localnow)) > maxNowDiff {
 		log.Panicf("transaction timestamp (%v) too far off local now (%v)", now, localnow)
 	}
-	return adj.StdTimestamp(now)
+	return adj.Timestamp(now)
 }
 
 func absDuration(d time.Duration) time.Duration {
