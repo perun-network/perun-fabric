@@ -19,9 +19,7 @@ import (
 	"fmt"
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 	"github.com/perun-network/perun-fabric/channel/test"
-	"github.com/perun-network/perun-fabric/wallet"
 	"math/big"
-	"math/rand"
 	pchannel "perun.network/go-perun/channel"
 	ptest "polycry.pt/poly-go/test"
 	"testing"
@@ -49,9 +47,19 @@ func withSubscriptionCollaborative(t *testing.T) {
 		adjs = append(adjs, as)
 	}
 
+	// Store original balances.
+	var bals [2]*big.Int
+	{
+		for i := uint(0); i <= 1; i++ {
+			bal, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
+			test.FatalErr("balance", err)
+			bals[i] = bal
+		}
+	}
+
 	rng := ptest.Prng(ptest.NameStr("TestAdjudicatorWithSubscriptionCollaborative"))
 	setup := adjtest.NewSetup(rng,
-		adjtest.WithAccounts(wallet.NewRandomAccount(rng), wallet.NewRandomAccount(rng)),
+		adjtest.WithAccounts(adjs[0].Account, adjs[1].Account),
 		adjtest.WithChannelBalances(big.NewInt(400), big.NewInt(100)))
 	id := setup.State.ID
 
@@ -87,12 +95,20 @@ func withSubscriptionCollaborative(t *testing.T) {
 
 	// Adjudicator: Withdraw.
 	{
-		numParts := len(ch.Params.Parts)
-		for _, i := range rand.Perm(numParts) {
+		for i := uint(0); i <= 1; i++ {
 			req.Idx = pchannel.Index(i)
 			req.Acc = adjs[i].Account
 			err = adjs[i].Adjudicator.Withdraw(ctx, req, makeStateMapFromSignedStates(subChannels...))
 			test.FatalClientErr("withdraw", err)
+		}
+	}
+
+	// Check balances.
+	{
+		for i := uint(0); i <= 1; i++ {
+			bal, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
+			test.FatalErr("balance", err)
+			test.RequireEqual(bals[i].Cmp(bal), 0, "balance not as expected")
 		}
 	}
 
@@ -142,6 +158,16 @@ func withSubscriptionDispute(t *testing.T) {
 		test.RequireEqual(bal, holding, "Holding")
 	}
 	var subChannels []pchannel.SignedState // We do not test with subchannels yet.
+
+	// Store balances after.
+	var bals [2]*big.Int
+	{
+		for i := uint(0); i <= 1; i++ {
+			bal, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
+			test.FatalErr("balance", err)
+			bals[i] = bal
+		}
+	}
 
 	// Adjudicator: Subscribe to events.
 	eventSub, err := adjs[0].Adjudicator.Subscribe(ctx, id)
@@ -214,12 +240,22 @@ func withSubscriptionDispute(t *testing.T) {
 				Sigs:  ch.Sigs,
 			},
 		}
-		numParts := len(ch.Params.Parts)
-		for _, i := range rand.Perm(numParts) {
+
+		for i := uint(0); i <= 1; i++ {
 			req.Idx = pchannel.Index(i)
 			req.Acc = adjs[i].Account
 			err = adjs[i].Adjudicator.Withdraw(ctx, req, makeStateMapFromSignedStates(subChannels...))
 			test.FatalClientErr("withdraw", err)
+		}
+	}
+
+	// Check new balances.
+	{
+		for i := uint(0); i <= 1; i++ {
+			bal, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
+			test.FatalErr("balance", err)
+			bals[i].Add(bals[i], setup.State.Balances[i])
+			test.RequireEqual(bal.Cmp(bals[i]), 0, "balance not as expected")
 		}
 	}
 

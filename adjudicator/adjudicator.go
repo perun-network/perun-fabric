@@ -153,9 +153,14 @@ func (a *Adjudicator) Withdraw(swr SignedWithdrawReq) (*big.Int, error) {
 	}
 
 	// Send funds back.
-	err = a.asset.Transfer(a.identifier, swr.Req.Receiver, holding)
+	transferErr := a.asset.Transfer(a.identifier, swr.Req.Receiver, holding)
 	if err != nil {
-		return nil, err
+		// Ensure funds not stuck in channel if withdraw fails.
+		rollbackErr := a.holdings.Deposit(swr.Req.ID, swr.Req.Part, holding)
+		if rollbackErr != nil {
+			return nil, rollbackErr
+		}
+		return nil, transferErr
 	}
 	return holding, nil
 }
@@ -184,6 +189,8 @@ func ValidateChannel(ch *SignedChannel) error {
 	return nil
 }
 
+// Deposit transfers the given amount of coins from the callee to the channel with the specified channel ID.
+// The funds are stored in the channel under the participant's wallet address.
 func (a *Adjudicator) Deposit(calleeID string, chID channel.ID, part wallet.Address, amount *big.Int) error {
 	// Transfer funds to channel.
 	err := a.asset.Transfer(calleeID, a.identifier, amount)
@@ -195,34 +202,40 @@ func (a *Adjudicator) Deposit(calleeID string, chID channel.ID, part wallet.Addr
 	err = a.holdings.Deposit(chID, part, amount)
 	if err != nil {
 		// Ensure funds not stuck in channel if deposit fails.
-		transferErr := a.asset.Transfer(a.identifier, calleeID, amount)
-		if err != nil {
-			return transferErr
+		rollbackErr := a.asset.Transfer(a.identifier, calleeID, amount)
+		if rollbackErr != nil {
+			return rollbackErr
 		}
 	}
 	return err
 }
 
+// Holding returns the current holding amount of the given participant in the channel.
 func (a *Adjudicator) Holding(id channel.ID, part wallet.Address) (*big.Int, error) {
 	return a.holdings.Holding(id, part)
 }
 
+// TotalHolding returns the sum of all participant holdings in the channel.
 func (a *Adjudicator) TotalHolding(id channel.ID, parts []wallet.Address) (*big.Int, error) {
 	return a.holdings.TotalHolding(id, parts)
 }
 
+// Mint generates the given amount of asset tokens for the callee.
 func (a *Adjudicator) Mint(calleeID string, amount *big.Int) error {
 	return a.asset.Mint(calleeID, amount)
 }
 
+// Burn destroys the given amount of asset tokens for the callee.
 func (a *Adjudicator) Burn(calleeID string, amount *big.Int) error {
 	return a.asset.Burn(calleeID, amount)
 }
 
+// Transfer sends the given amount of asset tokens from the sender to the receiver.
 func (a *Adjudicator) Transfer(senderID string, receiverID string, amount *big.Int) error {
 	return a.asset.Transfer(senderID, receiverID, amount)
 }
 
+// BalanceOfID returns the asset token balance of the given user identifier.
 func (a *Adjudicator) BalanceOfID(userID string) (*big.Int, error) {
 	return a.asset.BalanceOf(userID)
 }

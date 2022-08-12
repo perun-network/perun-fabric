@@ -24,7 +24,7 @@ func NewAssetHolder(ledger HoldingLedger) *AssetHolder {
 // Deposit registers a deposit for channel `id` and participant `part` of amount
 // `amount`, possibly adding to an already existent deposit.
 //
-// Deposit panics if `amount` is negative.
+// Deposit throws an error if `amount` is negative.
 //
 // Ledger access errors are propagated.
 func (a *AssetHolder) Deposit(id channel.ID, part wallet.Address, amount *big.Int) error {

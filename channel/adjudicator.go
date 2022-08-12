@@ -32,8 +32,9 @@ const (
 
 // Adjudicator provides methods for dispute resolution on the ledger.
 type Adjudicator struct {
-	binding *binding.Adjudicator // binding gives access to the Adjudicator contract.
-	polling time.Duration        // The polling interval for event subscription.
+	binding  *binding.Adjudicator // binding gives access to the Adjudicator contract.
+	polling  time.Duration        // The polling interval for event subscription.
+	receiver string               // The fabric id of the receiver of the funds for withdrawal.
 }
 
 type AdjudicatorOpt func(*Adjudicator)
@@ -44,10 +45,11 @@ func WithSubPollingInterval(d time.Duration) AdjudicatorOpt {
 	}
 }
 
-func NewAdjudicator(network *client.Network, chaincode string, opts ...AdjudicatorOpt) *Adjudicator {
+func NewAdjudicator(network *client.Network, chaincode string, withdrawTo string, opts ...AdjudicatorOpt) *Adjudicator {
 	a := &Adjudicator{
-		binding: binding.NewAdjudicatorBinding(network, chaincode),
-		polling: defaultAdjPollingInterval,
+		binding:  binding.NewAdjudicatorBinding(network, chaincode),
+		polling:  defaultAdjPollingInterval,
+		receiver: withdrawTo,
 	}
 	for _, opt := range opts {
 		opt(a)
@@ -77,7 +79,7 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 	if len(subStates) > 0 {
 		return fmt.Errorf("subchannels not supported")
 	}
-	id := req.Tx.ID
+	channelID := req.Tx.ID
 
 	// For withdrawing there must be at least one registered state.
 	if req.Tx.IsFinal {
@@ -88,7 +90,7 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 		}
 	} else {
 		// Dispute case: There must be a registered state.
-		reg, err := a.binding.StateReg(id)
+		reg, err := a.binding.StateReg(channelID)
 		if err != nil {
 			return err
 		}
@@ -105,8 +107,12 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 	}
 
 	// Concluded (or waited for challenge duration in case of dispute)
-	part := req.Params.Parts[req.Idx]
-	_, err := a.binding.Withdraw(id, part)
+	// Withdraw funds.
+	withdrawReq, err := adj.SignWithdrawRequest(req.Acc, channelID, a.receiver)
+	if err != nil {
+		return err
+	}
+	_, err = a.binding.Withdraw(*withdrawReq)
 	if err != nil {
 		return err
 	}

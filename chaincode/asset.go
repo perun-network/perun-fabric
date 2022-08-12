@@ -69,18 +69,18 @@ func (s StubAsset) Burn(id string, amount *big.Int) error {
 	return nil
 }
 
-func (s StubAsset) Transfer(id string, receiver string, amount *big.Int) error {
+func (s StubAsset) Transfer(sender string, receiver string, amount *big.Int) error {
 	// Check zero/negative amount.
 	if amount.Cmp(big.NewInt(0)) < 0 {
 		return fmt.Errorf("cannot transfer negative amount")
 	}
 
-	// Get balances of parties.
-	senderBal, err := s.BalanceOf(id)
+	// Check balance of sender.
+	senderBal, err := s.BalanceOf(sender)
 	if err != nil {
 		return err
 	}
-	if senderBal.Cmp(amount) <= 0 {
+	if !(senderBal.Cmp(amount) >= 0) {
 		return fmt.Errorf("not enought funds to transfer the requested amount")
 	}
 	receiverBal, err := s.BalanceOf(receiver)
@@ -93,7 +93,7 @@ func (s StubAsset) Transfer(id string, receiver string, amount *big.Int) error {
 	receiverBal.Add(receiverBal, amount)
 
 	// Store new balances.
-	if err := s.Stub.PutState(id, senderBal.Bytes()); err != nil {
+	if err := s.Stub.PutState(sender, senderBal.Bytes()); err != nil {
 		return fmt.Errorf("stub.PutState: %w", err)
 	}
 	if err := s.Stub.PutState(receiver, receiverBal.Bytes()); err != nil {

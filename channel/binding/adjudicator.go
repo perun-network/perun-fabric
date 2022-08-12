@@ -83,12 +83,12 @@ func (a *Adjudicator) StateReg(id channel.ID) (*adj.StateReg, error) {
 	return &reg, json.Unmarshal(regJson, &reg)
 }
 
-func (a *Adjudicator) Withdraw(id channel.ID, part wallet.Address) (*big.Int, error) {
-	args, err := pkgjson.MultiMarshal(id, part)
+func (a *Adjudicator) Withdraw(req adj.SignedWithdrawReq) (*big.Int, error) {
+	arg, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-	return bigIntWithError(a.submitTransactionWithRetry(txWithdraw, args...))
+	return bigIntWithError(a.submitTransactionWithRetry(txWithdraw, string(arg)))
 }
 
 func (a *Adjudicator) MintToken(amount *big.Int) error {

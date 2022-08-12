@@ -78,17 +78,12 @@ func (a *Adjudicator) StateReg(ctx contractapi.TransactionContextInterface,
 }
 
 func (a *Adjudicator) Withdraw(ctx contractapi.TransactionContextInterface,
-	id channel.ID, partStr string) (string, error) {
-	calleeID, err := ctx.GetClientIdentity().GetID() // TODO: Remove for new Withdraw logic with signed request.
-	if err != nil {
+	reqStr string) (string, error) {
+	var req adj.SignedWithdrawReq
+	if err := json.Unmarshal([]byte(reqStr), &req); err != nil {
 		return "", err
 	}
-
-	part, err := UnmarshalAddress(partStr)
-	if err != nil {
-		return "", err
-	}
-	return stringWithErr(a.contract(ctx).Withdraw(calleeID, id, part))
+	return stringWithErr(a.contract(ctx).Withdraw(req))
 }
 
 func (a *Adjudicator) MintToken(ctx contractapi.TransactionContextInterface,

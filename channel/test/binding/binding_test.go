@@ -16,6 +16,7 @@ package binding_test
 
 import (
 	"fmt"
+	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/perun-network/perun-fabric/channel/test"
 	"math/big"
 	"perun.network/go-perun/channel"
@@ -62,7 +63,8 @@ func TestBinding(t *testing.T) {
 	test.RequireEqual(regfinal.CoreState(), regfinal0.CoreState(), "final StateReg")
 
 	for i := range setup.Parts {
-		withdrawn, err := adjs[i].Binding.Withdraw(id, setup.Parts[i])
+		req, _ := adj.SignWithdrawRequest(adjs[i].Account, setup.Params.ID(), adjs[i].ClientFabricID)
+		withdrawn, err := adjs[i].Binding.Withdraw(*req)
 		test.FatalClientErr("withdrawing", err)
 		test.RequireEqual(setup.State.Balances[i], withdrawn, "Withdraw")
 	}

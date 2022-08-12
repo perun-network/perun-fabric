@@ -24,13 +24,13 @@ import (
 )
 
 type Session struct {
-	ClientID    string
-	Adjudicator *channel.Adjudicator
-	Binding     *binding.Adjudicator
-	Funder      *channel.Funder
-	Account     *wallet.Account
-	conn        *grpc.ClientConn
-	gw          *client.Gateway
+	ClientFabricID string
+	Adjudicator    *channel.Adjudicator
+	Binding        *binding.Adjudicator
+	Funder         *channel.Funder
+	Account        *wallet.Account
+	conn           *grpc.ClientConn
+	gw             *client.Gateway
 }
 
 func NewTestSession(org Org, adjudicator string) (_ *Session, err error) {
@@ -48,13 +48,13 @@ func NewTestSession(org Org, adjudicator string) (_ *Session, err error) {
 
 	network := gateway.GetNetwork(ChannelName)
 	return &Session{
-		ClientID:    clientID,
-		Adjudicator: channel.NewAdjudicator(network, adjudicator),
-		Binding:     binding.NewAdjudicatorBinding(network, adjudicator),
-		Funder:      channel.NewFunder(network, adjudicator),
-		Account:     acc,
-		conn:        clientConn,
-		gw:          gateway,
+		ClientFabricID: clientID,
+		Adjudicator:    channel.NewAdjudicator(network, adjudicator, clientID),
+		Binding:        binding.NewAdjudicatorBinding(network, adjudicator),
+		Funder:         channel.NewFunder(network, adjudicator),
+		Account:        acc,
+		conn:           clientConn,
+		gw:             gateway,
 	}, nil
 }
 

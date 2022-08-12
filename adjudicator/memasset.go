@@ -47,9 +47,9 @@ func (m MemAsset) Transfer(id string, receiver string, amount *big.Int) error {
 		return fmt.Errorf("cannot transfer negative amount")
 	}
 
-	// Get balances of parties.
+	// Check balance of sender.
 	senderBal, _ := m.BalanceOf(id) // No error expected.
-	if senderBal.Cmp(amount) < 0 {
+	if !(senderBal.Cmp(amount) >= 0) {
 		return fmt.Errorf("not enought funds to transfer the requested amount")
 	}
 	receiverBal, _ := m.BalanceOf(receiver) // No error expected.

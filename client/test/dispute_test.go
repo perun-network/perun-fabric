@@ -76,7 +76,7 @@ func TestDisputeMalloryCarol(t *testing.T) {
 		}
 
 		// Get current asset balances to use for checks later.
-		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientID)
+		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
 		assert.NoError(t, err)
 		initAssetBalance[i] = balance
 	}
@@ -103,7 +103,7 @@ func TestDisputeMalloryCarol(t *testing.T) {
 	expectedAssetBalance[0].Sub(initAssetBalance[0], big.NewInt(45)) // Only Mallory's payments expected to succeed.
 	expectedAssetBalance[1].Add(initAssetBalance[1], big.NewInt(45))
 	for i := 0; i < len(setup); i++ {
-		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientID)
+		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedAssetBalance[i], balance)
 	}
