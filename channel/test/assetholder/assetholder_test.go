@@ -17,6 +17,7 @@ package assetholder_test
 import (
 	"github.com/perun-network/perun-fabric/channel/binding"
 	"github.com/perun-network/perun-fabric/channel/test"
+	requ "github.com/stretchr/testify/require"
 	"math/big"
 	"testing"
 
@@ -28,6 +29,7 @@ import (
 )
 
 func TestAssetholder(t *testing.T) {
+	require := requ.New(t)
 	org := test.OrgNum(1)
 	clientConn, err := test.NewGrpcConnection(org)
 	test.FatalErr("creating client conn", err)
@@ -48,17 +50,17 @@ func TestAssetholder(t *testing.T) {
 
 	holding1, err := ah.Holding(id, addr)
 	test.FatalClientErr("querying holding", err)
-	test.RequireEqual(holding, holding1, "Holding")
+	require.Equal(0, holding.Cmp(holding1), "Holding")
 
 	total, err := ah.TotalHolding(id, []wallet.Address{addr})
 	test.FatalClientErr("querying total holding", err)
-	test.RequireEqual(holding, total, "Holding")
+	require.Equal(0, holding.Cmp(total), "Total Holding")
 
 	withdrawn, err := ah.Withdraw(id, addr)
 	test.FatalClientErr("withdrawing", err)
-	test.RequireEqual(holding, withdrawn, "Withdraw")
+	require.Equal(0, holding.Cmp(withdrawn), "Withdraw")
 
 	holding2, err := ah.Holding(id, addr)
 	test.FatalClientErr("querying holding", err)
-	test.RequireEqual(new(big.Int), holding2, "Holding after withdrawal")
+	require.Equal(0, holding2.Cmp(new(big.Int)), "Holding after withdrawal")
 }

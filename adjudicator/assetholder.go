@@ -47,7 +47,7 @@ func (a *AssetHolder) Deposit(id channel.ID, part wallet.Address, amount *big.In
 	return nil
 }
 
-// Holding returns the holdings of participant `part` in the channel of id `id`
+// Holding returns the holdings of participant `part` in the channel of id `id`.
 func (a *AssetHolder) Holding(id channel.ID, part wallet.Address) (*big.Int, error) {
 	holding := new(big.Int)
 	if current, err := a.ledger.GetHolding(id, part); err == nil {

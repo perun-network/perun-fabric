@@ -19,6 +19,7 @@ import (
 	"fmt"
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 	"github.com/perun-network/perun-fabric/channel/test"
+	requ "github.com/stretchr/testify/require"
 	"math/big"
 	pchannel "perun.network/go-perun/channel"
 	ptest "polycry.pt/poly-go/test"
@@ -36,6 +37,8 @@ func TestAdjudicator(t *testing.T) {
 }
 
 func withSubscriptionCollaborative(t *testing.T) {
+	require := requ.New(t)
+
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
@@ -69,7 +72,7 @@ func withSubscriptionCollaborative(t *testing.T) {
 
 		holding, err := adjs[i].Binding.Holding(id, part)
 		test.FatalClientErr("querying holding", err)
-		test.RequireEqual(bal, holding, "Holding")
+		require.Equal(0, bal.Cmp(holding), "Holding")
 	}
 	var subChannels []pchannel.SignedState // We do not test with subchannels yet.
 
@@ -108,16 +111,16 @@ func withSubscriptionCollaborative(t *testing.T) {
 		for i := uint(0); i <= 1; i++ {
 			bal, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
 			test.FatalErr("balance", err)
-			test.RequireEqual(bals[i].Cmp(bal), 0, "balance not as expected")
+			require.Equal(0, bals[i].Cmp(bal), "balance not as expected")
 		}
 	}
 
 	// Subscription: Check concluded event.
 	{
 		e, ok := eventSub.Next().(*pchannel.ConcludedEvent)
-		test.RequireEqual(true, ok, "concluded")
-		test.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
-		test.RequireEqual(e.Version() == ch.State.CoreState().Version, true, "version")
+		require.Equal(true, ok, "concluded")
+		require.Equal(true, e.ID() == ch.Params.ID(), "equal ID")
+		require.Equal(true, e.Version() == ch.State.CoreState().Version, "version")
 		err = e.Timeout().Wait(ctx)
 		test.FatalErr("concluded: wait", err)
 	}
@@ -129,10 +132,11 @@ func withSubscriptionCollaborative(t *testing.T) {
 		err = eventSub.Err()
 		test.FatalErr("err", err)
 	}
-
 }
 
 func withSubscriptionDispute(t *testing.T) {
+	require := requ.New(t)
+
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
@@ -155,7 +159,7 @@ func withSubscriptionDispute(t *testing.T) {
 		test.FatalClientErr("sending Deposit tx", adjs[i].Binding.Deposit(id, part, bal))
 		holding, err := adjs[i].Binding.Holding(id, part)
 		test.FatalClientErr("querying holding", err)
-		test.RequireEqual(bal, holding, "Holding")
+		require.Equal(0, bal.Cmp(holding), "Holding")
 	}
 	var subChannels []pchannel.SignedState // We do not test with subchannels yet.
 
@@ -189,10 +193,10 @@ func withSubscriptionDispute(t *testing.T) {
 	// Subscription: Check registered event version 0.
 	{
 		e, ok := eventSub.Next().(*pchannel.RegisteredEvent)
-		test.RequireEqual(true, ok, "registered")
-		test.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
-		test.RequireEqual(e.Version() == ch.State.Version, true, "version")
-		test.RequireEqual(e.State.Equal(ch.State.CoreState()) == nil, true, "equal state")
+		require.Equal(true, ok, "concluded")
+		require.Equal(true, e.ID() == ch.Params.ID(), "equal ID")
+		require.Equal(true, e.Version() == ch.State.CoreState().Version, "version")
+		require.Equal(true, e.State.Equal(ch.State.CoreState()) == nil, "equal state")
 	}
 
 	// Adjudicator: Register version 1.
@@ -215,17 +219,17 @@ func withSubscriptionDispute(t *testing.T) {
 	// Subscription: Check registered event version 1 and wait for timeout.
 	{
 		e, ok := eventSub.Next().(*pchannel.RegisteredEvent)
-		test.RequireEqual(true, ok, "registered")
-		test.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
-		test.RequireEqual(e.Version() == ch.State.CoreState().Version, true, "version")
-		test.RequireEqual(e.State.Equal(ch.State.CoreState()) == nil, true, "equal state")
+		require.Equal(true, ok, "concluded")
+		require.Equal(true, e.ID() == ch.Params.ID(), "equal ID")
+		require.Equal(true, e.Version() == ch.State.CoreState().Version, "version")
+		require.Equal(true, e.State.Equal(ch.State.CoreState()) == nil, "equal state")
 	}
 
 	for i, part := range setup.Parts {
 		bal := setup.State.Balances[i]
 		holding, err := adjs[i].Binding.Holding(id, part)
 		test.FatalClientErr("querying holding", err)
-		test.RequireEqual(bal, holding, "Holding")
+		require.Equal(0, bal.Cmp(holding), "Holding")
 	}
 	// Adjudicator: Progress.
 	// We do not test on-chain progression yet.
@@ -255,16 +259,16 @@ func withSubscriptionDispute(t *testing.T) {
 			bal, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
 			test.FatalErr("balance", err)
 			bals[i].Add(bals[i], setup.State.Balances[i])
-			test.RequireEqual(bal.Cmp(bals[i]), 0, "balance not as expected")
+			require.Equal(0, bal.Cmp(bals[i]), "Balance not as expected")
 		}
 	}
 
 	// Subscription: Check concluded event.
 	{
 		e, ok := eventSub.Next().(*pchannel.ConcludedEvent)
-		test.RequireEqual(true, ok, "concluded")
-		test.RequireEqual(e.ID() == ch.Params.ID(), true, "equal ID")
-		test.RequireEqual(e.Version() == ch.State.CoreState().Version, true, "version")
+		require.Equal(true, ok, "concluded")
+		require.Equal(true, e.ID() == ch.Params.ID(), "equal ID")
+		require.Equal(true, e.Version() == ch.State.CoreState().Version, "version")
 		err = e.Timeout().Wait(ctx)
 		test.FatalErr("concluded: wait", err)
 	}
@@ -276,7 +280,6 @@ func withSubscriptionDispute(t *testing.T) {
 		err = eventSub.Err()
 		test.FatalErr("err", err)
 	}
-
 }
 
 func makeStateMapFromSignedStates(channels ...pchannel.SignedState) pchannel.StateMap {

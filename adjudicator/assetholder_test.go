@@ -23,8 +23,8 @@ func TestAssetHolder(t *testing.T) {
 
 	t.Run("SetHolding", func(t *testing.T) {
 		require := require.New(t)
-		ah, id, _addrs, _bal := ahSetup(rng, 1)
-		addr, bal := _addrs[0], _bal[0]
+		ah, id, addrs, bals := ahSetup(rng, 1)
+		addr, bal := addrs[0], bals[0]
 
 		hzero, err := ah.Holding(id, addr)
 		require.NoError(err)
@@ -38,8 +38,8 @@ func TestAssetHolder(t *testing.T) {
 
 	t.Run("MultiDepositWithdraw", func(t *testing.T) {
 		require := require.New(t)
-		ah, id, _addrs, bals := ahSetup(rng, 2)
-		addr := _addrs[0]
+		ah, id, addrs, bals := ahSetup(rng, 2)
+		addr := addrs[0]
 
 		hzero, err := ah.Holding(id, addr)
 		require.NoError(err)

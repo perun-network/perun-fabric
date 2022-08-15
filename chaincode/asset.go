@@ -10,14 +10,18 @@ import (
 // centralBankerID is the user allowed to mint & burn tokens.
 const centralBankerID = "eDUwOTo6Q049dXNlcjEsT1U9Y2xpZW50LE89SHlwZXJsZWRnZXIsU1Q9Tm9ydGggQ2Fyb2xpbmEsQz1VUzo6Q049Y2Eub3JnMS5leGFtcGxlLmNvbSxPPW9yZzEuZXhhbXBsZS5jb20sTD1EdXJoYW0sU1Q9Tm9ydGggQ2Fyb2xpbmEsQz1VUw=="
 
+// StubAsset is an on-chain asset.
 type StubAsset struct {
 	Stub shim.ChaincodeStubInterface
 }
 
+// NewStubAsset returns an Asset that uses the stub of the transaction context for storing asset holdings.
 func NewStubAsset(ctx contractapi.TransactionContextInterface) *StubAsset {
 	return &StubAsset{Stub: ctx.GetStub()}
 }
 
+// Mint creates the desired amount of token for the given id.
+// The id must be the callee of the transaction invoking Mint.
 func (s StubAsset) Mint(id string, amount *big.Int) error {
 	// Check if id == centralBanker.
 	if id != centralBankerID {
@@ -41,6 +45,8 @@ func (s StubAsset) Mint(id string, amount *big.Int) error {
 	return nil
 }
 
+// Burn removes the desired amount of token from the given id.
+// The id must be the callee of the transaction invoking Burn.
 func (s StubAsset) Burn(id string, amount *big.Int) error {
 	// Check if id == centralBanker.
 	if id != centralBankerID {
@@ -69,6 +75,9 @@ func (s StubAsset) Burn(id string, amount *big.Int) error {
 	return nil
 }
 
+// Transfer checks if the proposed transfer is valid and
+// transfers the given amount of coins from the sender to the receiver.
+// The sender must be the callee of the transaction invoking Transfer.
 func (s StubAsset) Transfer(sender string, receiver string, amount *big.Int) error {
 	// Check zero/negative amount.
 	if amount.Cmp(big.NewInt(0)) < 0 {
@@ -102,6 +111,8 @@ func (s StubAsset) Transfer(sender string, receiver string, amount *big.Int) err
 	return nil
 }
 
+// BalanceOf returns the amount of tokens the given id holds.
+// If the id is unknown, zero is returned.
 func (s StubAsset) BalanceOf(id string) (*big.Int, error) {
 	srb, err := s.Stub.GetState(id)
 	if err != nil {

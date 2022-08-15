@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
-	"github.com/hyperledger/fabric-protos-go/peer"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/perun-network/perun-fabric/channel/binding"
 	fabclient "github.com/perun-network/perun-fabric/client"
@@ -37,14 +36,17 @@ type Adjudicator struct {
 	receiver string               // The fabric id of the receiver of the funds for withdrawal.
 }
 
+// AdjudicatorOpt allows to extend the Adjudicator constructor.
 type AdjudicatorOpt func(*Adjudicator)
 
+// WithSubPollingInterval overwrites the polling interval for the Adjudicators' event subscription.
 func WithSubPollingInterval(d time.Duration) AdjudicatorOpt {
 	return func(a *Adjudicator) {
 		a.polling = d
 	}
 }
 
+// NewAdjudicator generates an Adjudicator and requires to preset the fabric ID used for withdrawal.
 func NewAdjudicator(network *client.Network, chaincode string, withdrawTo string, opts ...AdjudicatorOpt) *Adjudicator {
 	a := &Adjudicator{
 		binding:  binding.NewAdjudicatorBinding(network, chaincode),
@@ -82,7 +84,7 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 	channelID := req.Tx.ID
 
 	// For withdrawing there must be at least one registered state.
-	if req.Tx.IsFinal {
+	if req.Tx.IsFinal { //nolint:nestif
 		// Ensure there is a registered state.
 		err := a.ensureRegistered(ctx, req, nil)
 		if err != nil {
@@ -138,21 +140,18 @@ func (a *Adjudicator) Subscribe(ctx context.Context, ch channel.ID) (channel.Adj
 	return sub, nil
 }
 
+// ensureRegistered tries to register the state given in AdjudicatorReq.
+// If the channel is already registered or the registration is successful ensureRegisters returns nil.
+// Otherwise, an error is returned.
 func (a *Adjudicator) ensureRegistered(ctx context.Context, req channel.AdjudicatorReq, subChannels []channel.SignedState) error {
 	err := a.Register(ctx, req, subChannels)
 
-	// In this case, the other party is registering simultaneously and got the lock on the contact.
-	if e, ok := err.(*client.CommitError); ok && e.Code == peer.TxValidationCode_MVCC_READ_CONFLICT {
-		return nil
-	}
-
-	// In this case, the other party already registered and called withdraw.
+	// If an underfunded error is returned:
+	// Either the clients AdjudicatorReq contains a faulty balance which we do not expect at this point.
+	// Or the other party successfully called withdraw which lowered the total holdings in the channel.
+	// Hence, the other party must have had registered before.
 	if fabclient.IsUnderfundedErr(err) {
 		return nil
 	}
-
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }

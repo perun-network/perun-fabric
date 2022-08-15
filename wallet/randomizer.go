@@ -7,10 +7,12 @@ import (
 	"perun.network/go-perun/wallet/test"
 )
 
+// Randomizer wraps a Wallet to derive new random parameters from it.
 type Randomizer struct {
 	wallet Wallet
 }
 
+// NewRandomizer returns a Randomizer containing a fresh, random Wallet.
 func NewRandomizer() *Randomizer {
 	return &Randomizer{
 		wallet: NewWallet(),

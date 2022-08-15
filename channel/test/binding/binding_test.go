@@ -18,6 +18,7 @@ import (
 	"fmt"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/perun-network/perun-fabric/channel/test"
+	requ "github.com/stretchr/testify/require"
 	"math/big"
 	"perun.network/go-perun/channel"
 	ptest "polycry.pt/poly-go/test"
@@ -28,6 +29,7 @@ import (
 )
 
 func TestBinding(t *testing.T) {
+	require := requ.New(t)
 	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {
 		as, err := test.NewTestSession(test.OrgNum(i), test.AdjudicatorName)
@@ -47,7 +49,7 @@ func TestBinding(t *testing.T) {
 		test.FatalClientErr("sending Deposit tx", adjs[i].Binding.Deposit(id, part, bal))
 		holding, err := adjs[i].Binding.Holding(id, part)
 		test.FatalClientErr("querying holding", err)
-		test.RequireEqual(bal, holding, "Holding")
+		require.Equal(0, bal.Cmp(holding), "Holding")
 	}
 	test.FatalClientErr("registering state 0 as part 0", adjs[0].Binding.Register(ch))
 
@@ -60,16 +62,16 @@ func TestBinding(t *testing.T) {
 
 	regfinal0, err := adjs[0].Binding.StateReg(id)
 	test.FatalClientErr("querying state", err)
-	test.RequireEqual(regfinal.CoreState(), regfinal0.CoreState(), "final StateReg")
+	require.Equal(true, regfinal.CoreState().Equal(regfinal0.CoreState()) == nil, "final StateReg")
 
 	for i := range setup.Parts {
 		req, _ := adj.SignWithdrawRequest(adjs[i].Account, setup.Params.ID(), adjs[i].ClientFabricID)
 		withdrawn, err := adjs[i].Binding.Withdraw(*req)
 		test.FatalClientErr("withdrawing", err)
-		test.RequireEqual(setup.State.Balances[i], withdrawn, "Withdraw")
+		require.Equal(0, setup.State.Balances[i].Cmp(withdrawn), "Withdraw")
 	}
 
 	totalfinal, err := adjs[1].Binding.TotalHolding(id, setup.Parts)
 	test.FatalClientErr("querying total holding", err)
-	test.RequireEqual(new(big.Int), totalfinal, "final zero holding")
+	require.Equal(0, totalfinal.Cmp(new(big.Int)), "final zero holding")
 }

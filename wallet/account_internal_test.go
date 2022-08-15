@@ -38,7 +38,6 @@ func TestSigMarshalingDecoding(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, r, r0)
 			require.Equal(t, s, s0)
-
 		})
 
 		t.Run(fmt.Sprintf("decoding-%d", i), func(t *testing.T) {

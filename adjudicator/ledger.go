@@ -14,18 +14,20 @@ import (
 type (
 	// Ledger contains the read and write operations required by the Adjudicator.
 	Ledger interface {
-		StateLedger   // The channel's state is stored here.
-		HoldingLedger // The channel's holdings are stored here.
+		StateLedger
+		HoldingLedger
 		Now() Timestamp
 	}
 
+	// StateLedger stores the channel's state.
 	StateLedger interface {
-		GetState(channel.ID) (*StateReg, error)
+		GetState(channel.ID) (*StateReg, error) //nolint:forbidigo
 		PutState(*StateReg) error
 	}
 
+	// HoldingLedger stores the channel's holdings.
 	HoldingLedger interface {
-		GetHolding(channel.ID, wallet.Address) (*big.Int, error)
+		GetHolding(channel.ID, wallet.Address) (*big.Int, error) //nolint:forbidigo
 		PutHolding(channel.ID, wallet.Address, *big.Int) error
 	}
 
@@ -37,6 +39,7 @@ type (
 	}
 )
 
+// IsNotFoundError returns true if given err is a NotFoundError.
 func IsNotFoundError(err error) bool {
 	notFoundErr := new(NotFoundError)
 	return errors.As(err, &notFoundErr)

@@ -3,6 +3,6 @@
 package fabric
 
 import (
-	_ "github.com/perun-network/perun-fabric/channel"
+	_ "github.com/perun-network/perun-fabric/channel" //nolint:nolintlint,revive
 	_ "github.com/perun-network/perun-fabric/wallet"
 )

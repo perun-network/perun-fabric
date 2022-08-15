@@ -23,6 +23,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Session contains all parts to test the fabric backend with a specific party.
 type Session struct {
 	ClientFabricID string
 	Adjudicator    *channel.Adjudicator
@@ -33,7 +34,10 @@ type Session struct {
 	gw             *client.Gateway
 }
 
-func NewTestSession(org Org, adjudicator string) (_ *Session, err error) {
+// NewTestSession generates a new session for testing the fabric backend with.
+// The user certificate is chosen by the given organization.
+// For connecting with the chaincode the adjudicator id is given.
+func NewTestSession(org Org, adjudicator string) (*Session, error) {
 	clientConn, err := NewGrpcConnection(org)
 	if err != nil {
 		return nil, fmt.Errorf("creating client conn: %w", err)
@@ -58,6 +62,7 @@ func NewTestSession(org Org, adjudicator string) (_ *Session, err error) {
 	}, nil
 }
 
+// Close closes the connection to fabric for this session.
 func (s Session) Close() error {
 	err0 := s.gw.Close()
 	err1 := s.conn.Close()

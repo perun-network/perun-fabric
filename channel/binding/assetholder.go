@@ -10,6 +10,7 @@ import (
 	pkgjson "github.com/perun-network/perun-fabric/pkg/json"
 )
 
+// AssetHolder wraps a fabric client.Contract to connect to the AssetHolder chaincode.
 type AssetHolder struct {
 	Contract *client.Contract
 }
@@ -21,6 +22,7 @@ func NewAssetHolderBinding(network *client.Network, chainCode string) *AssetHold
 	return &AssetHolder{Contract: network.GetContract(chainCode)}
 }
 
+// Deposit marshals the given parameters and sends a deposits request to the AssetHolder chaincode.
 func (ah *AssetHolder) Deposit(id channel.ID, part wallet.Address, amount *big.Int) error {
 	args, err := pkgjson.MultiMarshal(id, part, amount)
 	if err != nil {
@@ -30,6 +32,8 @@ func (ah *AssetHolder) Deposit(id channel.ID, part wallet.Address, amount *big.I
 	return err
 }
 
+// Holding marshals the given parameters and sends a holding request to the AssetHolder chaincode.
+// The response contains the current holding of the given address in the channel.
 func (ah *AssetHolder) Holding(id channel.ID, addr wallet.Address) (*big.Int, error) {
 	args, err := pkgjson.MultiMarshal(id, addr)
 	if err != nil {
@@ -38,6 +42,8 @@ func (ah *AssetHolder) Holding(id channel.ID, addr wallet.Address) (*big.Int, er
 	return bigIntWithError(ah.Contract.SubmitTransaction(txHolding, args...))
 }
 
+// TotalHolding marshals the given parameters and sends a total holding request to the AssetHolder chaincode.
+// The response contains the sum of the current holdings of the given addresses in the channel.
 func (ah *AssetHolder) TotalHolding(id channel.ID, addrs []wallet.Address) (*big.Int, error) {
 	args, err := pkgjson.MultiMarshal(id, addrs)
 	if err != nil {
@@ -46,6 +52,8 @@ func (ah *AssetHolder) TotalHolding(id channel.ID, addrs []wallet.Address) (*big
 	return bigIntWithError(ah.Contract.SubmitTransaction(txTotalHolding, args...))
 }
 
+// Withdraw marshals the given parameters and sends a withdrawal request to the AssetHolder chaincode.
+// The response contains the amount of funds withdrawn form the channel.
 func (ah *AssetHolder) Withdraw(id channel.ID, part wallet.Address) (*big.Int, error) {
 	args, err := pkgjson.MultiMarshal(id, part)
 	if err != nil {

@@ -24,6 +24,7 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
+// Backend provides basic functionalities for fabric.
 type Backend struct{}
 
 // CalcID calculates the channel id of a channel from its parameters. Usually,
@@ -31,11 +32,12 @@ type Backend struct{}
 // In order to guarantee non-malleability of States, any parameters omitted
 // from the CalcID digest need to be signed together with the State in
 // Sign().
-func (Backend) CalcID(params *channel.Params) (id channel.ID) {
+func (Backend) CalcID(params *channel.Params) channel.ID {
 	hash := sha256.New()
 	if err := params.Encode(hash); err != nil {
 		panic("error encoding Params: " + err.Error())
 	}
+	id := channel.ID{}
 	copy(id[:], hash.Sum(nil))
 	return id
 }
@@ -60,25 +62,25 @@ func (Backend) Verify(addr wallet.Address, state *channel.State, sig wallet.Sig)
 	return wallet.VerifySignature(buf.Bytes(), sig, addr)
 }
 
-// NewAsset returns a variable of type Asset, which can be used
-// for unmarshalling an asset from its binary representation.
+// NewAsset returns an empty noAsset.
 func (Backend) NewAsset() channel.Asset {
 	return noAsset{}
 }
 
+// NewRandomAsset returns an empty noAsset.
 func (b Backend) NewRandomAsset(*rand.Rand) channel.Asset {
 	return noAsset{}
 }
 
 type noAsset struct{}
 
-// MarshalBinary - noop
+// MarshalBinary - noop.
 func (noAsset) MarshalBinary() ([]byte, error) { return nil, nil }
 
-// UnmarshalBinary - noop
+// UnmarshalBinary - noop.
 func (noAsset) UnmarshalBinary([]byte) error { return nil }
 
-// Equal returns true iff the other asset is also a noAsset
+// Equal returns true iff the other asset is also a noAsset.
 func (noAsset) Equal(other channel.Asset) bool {
 	_, ok := other.(noAsset)
 	return ok

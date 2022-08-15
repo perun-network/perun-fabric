@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"math/big"
 	"perun.network/go-perun/channel"
-
-	adj "github.com/perun-network/perun-fabric/adjudicator"
 )
 
+// Adjudicator is the chaincode that implements the adjudicator.
 type Adjudicator struct {
 	contractapi.Contract
 }
@@ -20,6 +20,7 @@ func (Adjudicator) contract(ctx contractapi.TransactionContextInterface) *adj.Ad
 	return adj.NewAdjudicator(ctx.GetStub().GetChannelID(), NewStubLedger(ctx), NewStubAsset(ctx))
 }
 
+// Deposit unmarshalls the given arguments to forward the deposit request.
 func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
 	chID channel.ID, partStr string, amountStr string) error {
 	calleeID, err := ctx.GetClientIdentity().GetID()
@@ -27,7 +28,7 @@ func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
 		return err
 	}
 
-	amount, ok := new(big.Int).SetString(amountStr, 10)
+	amount, ok := new(big.Int).SetString(amountStr, 10) //nolint:gomnd
 	if !ok {
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
@@ -40,6 +41,8 @@ func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
 	return a.contract(ctx).Deposit(calleeID, chID, part, amount)
 }
 
+// Holding unmarshalls the given arguments to forward the holding request.
+// It returns the holding amount as a marshalled (string) *big.Int.
 func (a *Adjudicator) Holding(ctx contractapi.TransactionContextInterface,
 	id channel.ID, partStr string) (string, error) {
 	part, err := UnmarshalAddress(partStr)
@@ -49,6 +52,8 @@ func (a *Adjudicator) Holding(ctx contractapi.TransactionContextInterface,
 	return stringWithErr(a.contract(ctx).Holding(id, part))
 }
 
+// TotalHolding unmarshalls the given arguments to forward the total holding request.
+// It returns the sum of all holding amount of the given participants as a marshalled (string) *big.Int.
 func (a *Adjudicator) TotalHolding(ctx contractapi.TransactionContextInterface,
 	id channel.ID, partsStr string) (string, error) {
 	parts, err := UnmarshalAddresses(partsStr)
@@ -58,6 +63,7 @@ func (a *Adjudicator) TotalHolding(ctx contractapi.TransactionContextInterface,
 	return stringWithErr(a.contract(ctx).TotalHolding(id, parts))
 }
 
+// Register unmarshalls the given argument to forward the register request.
 func (a *Adjudicator) Register(ctx contractapi.TransactionContextInterface,
 	chStr string) error {
 	var ch adj.SignedChannel
@@ -67,16 +73,20 @@ func (a *Adjudicator) Register(ctx contractapi.TransactionContextInterface,
 	return a.contract(ctx).Register(&ch)
 }
 
+// StateReg unmarshalls the given argument to forward the state reg request.
+// It returns the retrieved state reg marshalled as string.
 func (a *Adjudicator) StateReg(ctx contractapi.TransactionContextInterface,
 	id channel.ID) (string, error) {
 	reg, err := a.contract(ctx).StateReg(id)
 	if err != nil {
 		return "", err
 	}
-	regJson, err := json.Marshal(reg)
-	return string(regJson), err
+	regJSON, err := json.Marshal(reg)
+	return string(regJSON), err
 }
 
+// Withdraw unmarshalls the given argument to forward the withdrawal request.
+// It returns the withdrawal amount as a marshalled (string) *big.Int.
 func (a *Adjudicator) Withdraw(ctx contractapi.TransactionContextInterface,
 	reqStr string) (string, error) {
 	var req adj.SignedWithdrawReq
@@ -86,6 +96,8 @@ func (a *Adjudicator) Withdraw(ctx contractapi.TransactionContextInterface,
 	return stringWithErr(a.contract(ctx).Withdraw(req))
 }
 
+// MintToken unmarshalls the given argument to forward the minting request.
+// The callee is derived from the transaction context.
 func (a *Adjudicator) MintToken(ctx contractapi.TransactionContextInterface,
 	amountStr string) error {
 	calleeID, err := ctx.GetClientIdentity().GetID()
@@ -93,7 +105,7 @@ func (a *Adjudicator) MintToken(ctx contractapi.TransactionContextInterface,
 		return err
 	}
 
-	amount, ok := new(big.Int).SetString(amountStr, 10)
+	amount, ok := new(big.Int).SetString(amountStr, 10) //nolint:gomnd
 	if !ok {
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
@@ -105,6 +117,8 @@ func (a *Adjudicator) MintToken(ctx contractapi.TransactionContextInterface,
 	return nil
 }
 
+// BurnToken unmarshalls the given argument to forward the burning request.
+// The callee is derived from the transaction context.
 func (a *Adjudicator) BurnToken(ctx contractapi.TransactionContextInterface,
 	amountStr string) error {
 	calleeID, err := ctx.GetClientIdentity().GetID()
@@ -112,7 +126,7 @@ func (a *Adjudicator) BurnToken(ctx contractapi.TransactionContextInterface,
 		return err
 	}
 
-	amount, ok := new(big.Int).SetString(amountStr, 10)
+	amount, ok := new(big.Int).SetString(amountStr, 10) //nolint:gomnd
 	if !ok {
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
@@ -124,6 +138,8 @@ func (a *Adjudicator) BurnToken(ctx contractapi.TransactionContextInterface,
 	return nil
 }
 
+// TransferToken unmarshalls the given arguments to forward the token transfer request.
+// The sender of the tokens is derived from the transaction context.
 func (a *Adjudicator) TransferToken(ctx contractapi.TransactionContextInterface,
 	receiverStr string, amountStr string) error {
 	calleeID, err := ctx.GetClientIdentity().GetID()
@@ -136,7 +152,7 @@ func (a *Adjudicator) TransferToken(ctx contractapi.TransactionContextInterface,
 		return err
 	}
 
-	amount, ok := new(big.Int).SetString(amountStr, 10)
+	amount, ok := new(big.Int).SetString(amountStr, 10) //nolint:gomnd
 	if !ok {
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
@@ -148,6 +164,8 @@ func (a *Adjudicator) TransferToken(ctx contractapi.TransactionContextInterface,
 	return nil
 }
 
+// TokenBalance unmarshalls the given argument to forward the token balance request.
+// It returns the balance as a marshalled (string) *big.Int.
 func (a *Adjudicator) TokenBalance(ctx contractapi.TransactionContextInterface,
 	id string) (string, error) {
 	idToCheck, err := UnmarshalID(id)

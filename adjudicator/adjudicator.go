@@ -10,8 +10,7 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
-// Adjudicator is an abstract implementation of the adjudicator smart
-// contract.
+// Adjudicator is an abstract implementation of the adjudicator smart contract.
 type Adjudicator struct {
 	ledger     Ledger
 	asset      Asset
@@ -19,6 +18,7 @@ type Adjudicator struct {
 	identifier string
 }
 
+// NewAdjudicator generates a new Adjudicator with an identifier, holding ledger and asset ledger.
 func NewAdjudicator(id string, ledger Ledger, asset Asset) *Adjudicator {
 	return &Adjudicator{
 		ledger:     ledger,
@@ -28,6 +28,7 @@ func NewAdjudicator(id string, ledger Ledger, asset Asset) *Adjudicator {
 	}
 }
 
+// Register verifies the given SignedChannel, updates the holdings and saves a new StateReg.
 func (a *Adjudicator) Register(ch *SignedChannel) error {
 	if err := ValidateChannel(ch); err != nil {
 		return err
@@ -115,6 +116,8 @@ func (a *Adjudicator) saveStateReg(ch *SignedChannel) error {
 	})
 }
 
+// StateReg fetches the current state from the ledger and returns it.
+// If no state is found under the given channel.ID an error is returned.
 func (a *Adjudicator) StateReg(id channel.ID) (*StateReg, error) {
 	reg, err := a.ledger.GetState(id)
 	if IsNotFoundError(err) {
@@ -160,6 +163,7 @@ func (a *Adjudicator) Withdraw(swr SignedWithdrawReq) (*big.Int, error) {
 	return holding, nil
 }
 
+// ValidateChannel checks if the given parameters in SignedChannel are in itself consistent.
 func ValidateChannel(ch *SignedChannel) error {
 	if ch.Params.ID() != ch.State.ID {
 		return ValidationError{errors.New("channel id mismatch")}

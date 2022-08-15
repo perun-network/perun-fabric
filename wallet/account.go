@@ -17,8 +17,12 @@ import (
 
 var defaultCurve = elliptic.P256()
 
+// Account identifies a Fabric identity by its X509 certificate's private key.
+// The only supported type is *ecdsa.PrivateKey because that's the only type used
+// in Fabric currently.
 type Account ecdsa.PrivateKey
 
+// ECDSA returns the private key.
 func (a *Account) ECDSA() *ecdsa.PrivateKey { return (*ecdsa.PrivateKey)(a) }
 
 // NewRandomAccount creates a new Account using the randomness
@@ -66,7 +70,7 @@ func marshalSig(curve elliptic.Curve, r, s *big.Int) wallet.Sig {
 	return sig
 }
 
-func unmarshalSig(sig []byte) (r, s *big.Int, err error) {
+func unmarshalSig(sig []byte) (*big.Int, *big.Int, error) {
 	if len(sig) == 0 {
 		return nil, nil, errors.New("UnmarshalSig: empty signature")
 	}
@@ -79,19 +83,20 @@ func unmarshalSig(sig []byte) (r, s *big.Int, err error) {
 	return r, s, nil
 }
 
+// DecodeSig decodes the given io.Reader to a wallet signature.
 func DecodeSig(r io.Reader) (wallet.Sig, error) {
 	sig := make([]byte, 1)
 	if _, err := io.ReadFull(r, sig); err != nil {
 		return nil, fmt.Errorf("reading sig size: %w", err)
 	}
-	sig = append(sig, make([]byte, sig[0]*2)...)
+	sig = append(sig, make([]byte, sig[0]*2)...) //nolint:makezero,gomnd
 	_, err := io.ReadFull(r, sig[1:])
 	return sig, err
 }
 
 func pointByteSize(curve elliptic.Curve) byte {
 	// rounding up is necessary for P521
-	return byte((curve.Params().BitSize + 7) / 8)
+	return byte((curve.Params().BitSize + 7) / 8) //nolint:gomnd
 }
 
 func sigSize(pointByteSize byte) int {

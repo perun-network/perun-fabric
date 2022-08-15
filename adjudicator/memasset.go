@@ -5,10 +5,20 @@ import (
 	"math/big"
 )
 
+// MemAsset is an in-memory asset for testing.
+// As it is for testing there is no central banker.
 type MemAsset struct {
 	holdings map[string]*big.Int
 }
 
+// NewMemAsset generates a new in-memory Asset.
+func NewMemAsset() *MemAsset {
+	return &MemAsset{
+		holdings: make(map[string]*big.Int),
+	}
+}
+
+// Mint creates the desired amount of token for the given id.
 func (m MemAsset) Mint(id string, amount *big.Int) error {
 	// Check if callee == centralBanker. Skipped for this demo asset.
 	// Check zero/negative amount.
@@ -22,6 +32,7 @@ func (m MemAsset) Mint(id string, amount *big.Int) error {
 	return nil
 }
 
+// Burn removes the desired amount of token from the given id.
 func (m MemAsset) Burn(id string, amount *big.Int) error {
 	// Check if callee == centralBanker. Skipped for this demo asset.
 	// Check zero/negative amount.
@@ -41,6 +52,8 @@ func (m MemAsset) Burn(id string, amount *big.Int) error {
 	return nil
 }
 
+// Transfer checks if the proposed transfer is valid and
+// transfers the given amount of coins from the sender to the receiver.
 func (m MemAsset) Transfer(id string, receiver string, amount *big.Int) error {
 	// Check zero/negative amount.
 	if amount.Cmp(big.NewInt(0)) < 0 {
@@ -64,16 +77,12 @@ func (m MemAsset) Transfer(id string, receiver string, amount *big.Int) error {
 	return nil
 }
 
+// BalanceOf returns the amount of tokens the given id holds.
+// If the id is unknown, zero is returned.
 func (m MemAsset) BalanceOf(id string) (*big.Int, error) {
 	current, ok := m.holdings[id]
 	if !ok {
 		return big.NewInt(0), nil
 	}
 	return new(big.Int).Set(current), nil
-}
-
-func NewMemAsset() *MemAsset {
-	return &MemAsset{
-		holdings: make(map[string]*big.Int),
-	}
 }

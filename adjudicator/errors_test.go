@@ -5,10 +5,9 @@ package adjudicator_test
 import (
 	"errors"
 	"fmt"
-	"testing"
-
 	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestIsAdjudicatorError(t *testing.T) {

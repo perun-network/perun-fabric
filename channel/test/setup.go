@@ -16,7 +16,6 @@ package test
 
 import (
 	"fmt"
-	"github.com/go-test/deep"
 	"log"
 	"os"
 	"path"
@@ -31,32 +30,46 @@ import (
 )
 
 const (
+	// ChannelName is the name of the fabric channel the clients communicate in.
+	// It is not the state channel.
+	ChannelName = "mychannel"
+	// AdjudicatorName is the adjudicator chaincode name.
+	AdjudicatorName = "adjudicator"
+	// AssetholderName is the assetholder chaincode name.
+	AssetholderName = "assetholder"
+
 	fabricSamplesEnv = "FABRIC_SAMPLES_DIR"
-	ChannelName      = "mychannel"
-	AdjudicatorName  = "adjudicator"
-	AssetholderName  = "assetholder"
+	evalTimeout      = 5 * time.Second
+	endorseTimeout   = 15 * time.Second
+	submitTimeout    = 5 * time.Second
+	commitTimeout    = 1 * time.Minute
 )
 
+// Org is a fabric organization.
 type Org string
 
 const (
+	// Org1 indicates demo organization one in fabric-samples.
 	Org1 Org = "org1"
+	// Org2 indicates demo organization two in fabric-samples.
 	Org2 Org = "org2"
 )
 
+// OrgNum returns the organisation identifier.
 func OrgNum(n uint) Org {
 	switch n {
-	case 1, 2:
+	case 1, 2: //nolint:gomnd
 		return Org(fmt.Sprintf("org%d", n))
 	}
 	panic(fmt.Sprintf("invalid org number %d", n))
 }
 
+// Port returns the organisations port.
 func (org Org) Port() string {
 	switch org {
 	case Org1:
 		return "7051"
-	case org:
+	case Org2:
 		return "9051"
 	}
 	panic("invalid org: " + org)
@@ -124,6 +137,7 @@ func NewAccountWithSigner(org Org) (identity.Sign, *wallet.Account, error) {
 	return pclient.NewAccountWithSigner(path)
 }
 
+// NewGateway creates a Gateway for a specific client identity with several timeouts for gRPC calls.
 func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.Account, string, error) {
 	id, addr, onChainID, err := NewIdentity(org)
 	if err != nil {
@@ -144,10 +158,10 @@ func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.
 		client.WithSign(sign),
 		client.WithClientConnection(clientConn),
 		// Default timeouts for different gRPC calls
-		client.WithEvaluateTimeout(5*time.Second),
-		client.WithEndorseTimeout(15*time.Second),
-		client.WithSubmitTimeout(5*time.Second),
-		client.WithCommitStatusTimeout(1*time.Minute),
+		client.WithEvaluateTimeout(evalTimeout),
+		client.WithEndorseTimeout(endorseTimeout),
+		client.WithSubmitTimeout(submitTimeout),
+		client.WithCommitStatusTimeout(commitTimeout),
 	)
 
 	return gw, acc, onChainID, err
@@ -167,11 +181,5 @@ func FatalErr(msg string, err error) {
 func FatalClientErr(msg string, err error) {
 	if err != nil {
 		log.Fatalf("Error %s: [%T] %+v\n%s", msg, err, err, pclient.ParseClientErr(err))
-	}
-}
-
-func RequireEqual(exp, act interface{}, msg string) {
-	if diff := deep.Equal(exp, act); diff != nil {
-		log.Fatalf("%s: not equal:\n%+v != %+v\nDiff:\n%v", msg, exp, act, diff)
 	}
 }

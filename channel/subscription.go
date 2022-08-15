@@ -40,6 +40,7 @@ type EventSubscription struct {
 	mtx         sync.Mutex   // mtx secures against a Close() call during the evaluation of detectEvent().
 }
 
+// NewEventSubscription generates a subscriber on the given channel.
 func NewEventSubscription(a *Adjudicator, ch channel.ID) (*EventSubscription, error) {
 	return &EventSubscription{
 		adjudicator: a,
@@ -104,14 +105,14 @@ func (s *EventSubscription) detectEvent() (channel.AdjudicatorEvent, error) {
 	}
 
 	// Get the on chain state.
-	d, err := s.getState()
+	d, err := s.fetchState()
 	if err != nil {
 		s.err <- err
 		return nil, err
 	}
 
 	// Only progress if some state is registered.
-	if s.registered {
+	if s.registered { //nolint:nestif
 		if !s.concluded {
 			// If channel isFinal or the timeout elapsed the channel is concluded.
 			if d.IsFinal || s.timeoutElapsed() {
@@ -162,9 +163,9 @@ func (s *EventSubscription) timeoutElapsed() bool {
 	return s.timeout.IsElapsed(context.Background())
 }
 
-// getState queries the current channel state from the ledger.
-// If there is no state available yet pass.
-func (s *EventSubscription) getState() (*adj.StateReg, error) {
+// fetchState queries the current channel state from the ledger.
+// If there is no state available yet, pass.
+func (s *EventSubscription) fetchState() (*adj.StateReg, error) {
 	ch := s.channelID
 	d, err := s.adjudicator.binding.StateReg(ch)
 

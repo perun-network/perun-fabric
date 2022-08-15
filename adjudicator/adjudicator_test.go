@@ -18,7 +18,7 @@ func TestValidateChannel(t *testing.T) {
 	require.NoError(t, adj.ValidateChannel(s.SignedChannel()))
 }
 
-func TestAdjudicator(t *testing.T) {
+func TestAdjudicator(t *testing.T) { //nolint:maintidx
 	t.Run("Deposit", func(t *testing.T) {
 		require := require.New(t)
 		s := adjtest.NewSetup(

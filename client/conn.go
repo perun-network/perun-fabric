@@ -68,7 +68,7 @@ func NewIdentity(mspID, certPath string) (*identity.X509Identity, *wallet.Addres
 		return nil, nil, "", fmt.Errorf("creating X509Identity: %w", err)
 	}
 
-	onChainID, err := getOnChainCertID(cert)
+	onChainID, err := calcOnChainCertID(cert)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("creating On Chain Idenity: %w", err)
 	}
@@ -76,6 +76,7 @@ func NewIdentity(mspID, certPath string) (*identity.X509Identity, *wallet.Addres
 	return id, addr, onChainID, nil
 }
 
+// NewAccountWithSigner generates a new account and singer based on the given path of the private key file.
 func NewAccountWithSigner(privateKeyPEMPath string) (identity.Sign, *wallet.Account, error) {
 	privateKeyPEM, err := os.ReadFile(privateKeyPEMPath)
 	if err != nil {
@@ -100,6 +101,7 @@ func NewAccountWithSigner(privateKeyPEMPath string) (identity.Sign, *wallet.Acco
 	return sign, (*wallet.Account)(ecdsaPrivateKey), nil
 }
 
+// ReadCertificate takes the given path to the certificate file, reads it and returns a x509.Certificate.
 func ReadCertificate(filename string) (*x509.Certificate, error) {
 	certificatePEM, err := os.ReadFile(filename)
 	if err != nil {
@@ -108,8 +110,10 @@ func ReadCertificate(filename string) (*x509.Certificate, error) {
 	return identity.CertificateFromPEM(certificatePEM)
 }
 
-// GetID returns a unique ID associated with the invoking identity.
-func getOnChainCertID(cert *x509.Certificate) (string, error) {
+// calcOnChainCertID returns a unique ID associated with the invoking identity.
+// This code is a direct copy of GetID() in the fabric-chaincode-go sdk as it is not exposed there.
+// https://github.com/hyperledger/fabric-chaincode-go/blob/9207360bbddd5952479c24154353b82c4c044677/pkg/cid/cid.go#L96
+func calcOnChainCertID(cert *x509.Certificate) (string, error) {
 	// When IdeMix, c.cert is nil for x509 type
 	// Here will return "", as there is no x509 type cert for generate id value with logic below.
 	if cert == nil {
@@ -118,15 +122,14 @@ func getOnChainCertID(cert *x509.Certificate) (string, error) {
 	// The leading "x509::" distinguishes this as an X509 certificate, and
 	// the subject and issuer DNs uniquely identify the X509 certificate.
 	// The resulting ID will remain the same if the certificate is renewed.
-	id := fmt.Sprintf("x509::%s::%s", getDN(&cert.Subject), getDN(&cert.Issuer))
+	id := fmt.Sprintf("x509::%s::%s", calcDN(&cert.Subject), calcDN(&cert.Issuer))
 	return base64.StdEncoding.EncodeToString([]byte(id)), nil
 }
 
-// Get the DN (distinguished name) associated with a pkix.Name.
-// NOTE: This code is almost a direct copy of the String() function in
-// https://go-review.googlesource.com/c/go/+/67270/1/src/crypto/x509/pkix/pkix.go#26
-// which returns a DN as defined by RFC 2253.
-func getDN(name *pkix.Name) string {
+// calcDN calculates the DN (distinguished name) associated with a pkix.Name.
+// This code is a direct copy of getDN() in the fabric-chaincode-go sdk as it is not exposed there.
+// https://github.com/hyperledger/fabric-chaincode-go/blob/9207360bbddd5952479c24154353b82c4c044677/pkg/cid/cid.go#L218
+func calcDN(name *pkix.Name) string { //nolint:gocognit
 	r := name.ToRDNSequence()
 	s := ""
 	for i := 0; i < len(r); i++ {

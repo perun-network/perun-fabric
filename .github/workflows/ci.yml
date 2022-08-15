@@ -2,7 +2,7 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
     tags:
   pull_request:
   release:
@@ -17,7 +17,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.43
+          version: v1.48
 
   tests:
     runs-on: ubuntu-latest
@@ -43,7 +43,7 @@ jobs:
       - name: Setup and Run Tests
         run: |
           cd ..
-          curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/master/scripts/bootstrap.sh | bash -s
+          curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/v2.4.6/scripts/bootstrap.sh | bash -s
           export FABRIC_SAMPLES_DIR=$(pwd)/fabric-samples/
           cd perun-fabric/
           ./scripts/deployCC.sh

@@ -8,9 +8,7 @@ import (
 
 	"perun.network/go-perun/wallet"
 
-	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 	_ "github.com/perun-network/perun-fabric" // init backend
-	fabwallet "github.com/perun-network/perun-fabric/wallet"
 )
 
 func stringWithErr(s fmt.Stringer, err error) (string, error) {
@@ -20,6 +18,7 @@ func stringWithErr(s fmt.Stringer, err error) (string, error) {
 	return s.String(), nil
 }
 
+// UnmarshalID unmarshalls a fabric ID.
 func UnmarshalID(idStr string) (string, error) {
 	id := ""
 	if err := json.Unmarshal([]byte(idStr), &id); err != nil {
@@ -28,6 +27,7 @@ func UnmarshalID(idStr string) (string, error) {
 	return id, nil
 }
 
+// UnmarshalAddress implements custom unmarshalling of wallet addresses.
 func UnmarshalAddress(addrStr string) (wallet.Address, error) {
 	addr := wallet.NewAddress()
 	if err := json.Unmarshal([]byte(addrStr), &addr); err != nil {
@@ -36,6 +36,7 @@ func UnmarshalAddress(addrStr string) (wallet.Address, error) {
 	return addr, nil
 }
 
+// UnmarshalAddresses unmarshalls an array of wallet addresses.
 func UnmarshalAddresses(addrsStr string) ([]wallet.Address, error) {
 	var jsonAddrs []json.RawMessage
 	if err := json.Unmarshal([]byte(addrsStr), &jsonAddrs); err != nil {
@@ -51,12 +52,4 @@ func UnmarshalAddresses(addrsStr string) ([]wallet.Address, error) {
 		addrs = append(addrs, addr)
 	}
 	return addrs, nil
-}
-
-func AddressFromTxCtx(ctx contractapi.TransactionContextInterface) (*fabwallet.Address, error) {
-	cert, err := ctx.GetClientIdentity().GetX509Certificate()
-	if err != nil {
-		return nil, fmt.Errorf("getting identity: %w", err)
-	}
-	return fabwallet.AddressFromX509Certificate(cert)
 }

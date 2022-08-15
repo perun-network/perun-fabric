@@ -14,12 +14,14 @@ import (
 )
 
 type (
+	// Params are the parameters of a state channel.
 	Params struct {
 		ChallengeDuration uint64           `json:"challengeDuration"`
 		Parts             []wallet.Address `json:"parts"`
 		Nonce             channel.Nonce    `json:"nonce"`
 	}
 
+	// State is a state of a state channel.
 	State struct {
 		ID       channel.ID    `json:"id"`
 		Version  uint64        `json:"version"`
@@ -27,34 +29,40 @@ type (
 		IsFinal  bool          `json:"final"`
 	}
 
+	// SignedChannel contains signatures on Params and State and is used for registering new states.
 	SignedChannel struct {
 		Params Params       `json:"params"`
 		State  State        `json:"state"`
 		Sigs   []wallet.Sig `json:"sigs"`
 	}
 
+	// WithdrawReq are parameters needed to withdraw funds from a state channel.
 	WithdrawReq struct {
 		ID       channel.ID     `json:"id"`
 		Part     wallet.Address `json:"part"`
 		Receiver string         `json:"receiver"`
 	}
 
+	// SignedWithdrawReq contains a signature over a WithdrawReq to check its validity.
 	SignedWithdrawReq struct {
 		Req WithdrawReq `json:"req"`
 		Sig wallet.Sig  `json:"sig"`
 	}
 
+	// StateReg adds a Timeout to the State to indicate the states challenge timeout.
 	StateReg struct {
 		State   `json:"state"`
 		Timeout Timestamp `json:"timeout"`
 	}
 )
 
+// Clone duplicates the params.
 func (p Params) Clone() Params {
 	p.Parts = wallet.CloneAddresses(p.Parts)
 	return p
 }
 
+// ID return the params channel id.
 func (p Params) ID() channel.ID {
 	return channel.CalcID(p.CoreParams())
 }
@@ -74,6 +82,7 @@ func (p Params) CoreParams() *channel.Params {
 	}
 }
 
+// UnmarshalJSON implements custom unmarshalling for Params.
 func (p *Params) UnmarshalJSON(data []byte) error {
 	var pj struct {
 		ChallengeDuration uint64            `json:"challengeDuration"`
@@ -91,7 +100,7 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 		part := wallet.NewAddress()
 		// Hide Address interface to make json.Unmarshaler visible of concrete
 		// Address implementation.
-		parti := part.(interface{})
+		parti := part.(interface{}) //nolint:forcetypeassert
 		if err := json.Unmarshal(rawp, &parti); err != nil {
 			return fmt.Errorf("unmarshaling part[%d]: %w", i, err)
 		}
@@ -124,6 +133,7 @@ func (s State) CoreState() *channel.State {
 	}
 }
 
+// Total returns the total balance of the State.
 func (s State) Total() channel.Bal {
 	total := new(big.Int)
 	for _, bal := range s.Balances {
@@ -132,6 +142,7 @@ func (s State) Total() channel.Bal {
 	return total
 }
 
+// Clone duplicates the State.
 func (s State) Clone() State {
 	bals := channel.CloneBals(s.Balances)
 	s.Balances = bals
@@ -139,14 +150,17 @@ func (s State) Clone() State {
 	return s
 }
 
+// Sign signs the State with a given account.
 func (s State) Sign(acc wallet.Account) (wallet.Sig, error) {
 	return channel.Sign(acc, s.CoreState())
 }
 
+// VerifySig verifies the signature on a State.
 func VerifySig(signer wallet.Address, state State, sig wallet.Sig) (bool, error) {
 	return channel.Verify(signer, state.CoreState(), sig)
 }
 
+// Clone duplicates the StateReg.
 func (s *StateReg) Clone() *StateReg {
 	return &StateReg{
 		State:   s.State.Clone(),
@@ -154,11 +168,14 @@ func (s *StateReg) Clone() *StateReg {
 	}
 }
 
+// Equal checks if the given StateReg is equal.
 func (s *StateReg) Equal(sr StateReg) bool {
 	err := s.CoreState().Equal(sr.CoreState())
 	return err == nil && s.Timeout.Equal(sr.Timeout)
 }
 
+// IsFinalizedAt checks if the registered state is final.
+// This is the case if either the isFinal flag is true or the timeout passed.
 func (s *StateReg) IsFinalizedAt(ts Timestamp) bool {
 	return s.IsFinal || ts.After(s.Timeout)
 }
@@ -182,6 +199,7 @@ func SignChannel(params Params, state State, accs []wallet.Account) (*SignedChan
 	}, nil
 }
 
+// Clone duplicates a SignedChannel.
 func (ch *SignedChannel) Clone() *SignedChannel {
 	return &SignedChannel{
 		Params: ch.Params.Clone(),
@@ -190,6 +208,7 @@ func (ch *SignedChannel) Clone() *SignedChannel {
 	}
 }
 
+// ConvertToSignedChannel takes a AdjudicatorReq and generates a SignedChannel from it.
 func ConvertToSignedChannel(req channel.AdjudicatorReq) (*SignedChannel, error) {
 	p := req.Params.Clone()
 	params := Params{
@@ -200,7 +219,7 @@ func ConvertToSignedChannel(req channel.AdjudicatorReq) (*SignedChannel, error) 
 
 	s := req.Tx.State.Clone()
 	if len(s.Balances) != 1 {
-		return nil, fmt.Errorf("Only single assets supported.")
+		return nil, fmt.Errorf("only single assets supported")
 	}
 	state := State{
 		ID:       s.ID,
@@ -216,6 +235,7 @@ func ConvertToSignedChannel(req channel.AdjudicatorReq) (*SignedChannel, error) 
 	}, nil
 }
 
+// SignWithdrawRequest generates a WithdrawReq and signs it with the given account to return a SignedWithdrawReq.
 func SignWithdrawRequest(acc wallet.Account, channel channel.ID, receiver string) (*SignedWithdrawReq, error) {
 	req := WithdrawReq{
 		ID:       channel,
@@ -234,6 +254,7 @@ func SignWithdrawRequest(acc wallet.Account, channel channel.ID, receiver string
 	}, nil
 }
 
+// UnmarshalJSON implements custom unmarshalling for WithdrawReq to deal with the participant address.
 func (wr *WithdrawReq) UnmarshalJSON(data []byte) error {
 	var wrj struct {
 		ID       channel.ID      `json:"id"`
@@ -248,7 +269,7 @@ func (wr *WithdrawReq) UnmarshalJSON(data []byte) error {
 	wr.Receiver = wrj.Receiver
 
 	part := wallet.NewAddress()
-	parti := part.(interface{})
+	parti := part.(interface{}) //nolint:forcetypeassert
 	if err := json.Unmarshal(wrj.Part, &parti); err != nil {
 		return fmt.Errorf("unmarshaling part: %w", err)
 	}

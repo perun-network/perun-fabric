@@ -10,6 +10,7 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
+// Backend provides useful methods for hl fabric.
 type Backend struct{}
 
 // NewAddress returns a variable of type Address, which can be used

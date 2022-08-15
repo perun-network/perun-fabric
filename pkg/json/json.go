@@ -8,7 +8,8 @@ import (
 // MultiMarshal calls json.Marshal on all xs and returns a slice of all
 // resulting strings. If any marshaling operation fails, it returns that error
 // together with the marshalings generated up to that point.
-func MultiMarshal(xs ...interface{}) (js []string, _ error) {
+func MultiMarshal(xs ...interface{}) ([]string, error) {
+	var js []string //nolint:prealloc
 	for i, x := range xs {
 		j, err := json.Marshal(x)
 		if err != nil {

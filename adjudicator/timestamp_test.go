@@ -27,8 +27,8 @@ func TestStdTimestamp(t *testing.T) {
 	t1 := adj.StdNow()
 
 	t.Run("Equal", func(t *testing.T) {
-		assert.True(t, t0.Equal(t0))
-		assert.True(t, t1.Equal(t1))
+		assert.True(t, t0.Equal(t0)) //nolint:gocritic
+		assert.True(t, t1.Equal(t1)) //nolint:gocritic
 		assert.False(t, t0.Equal(t1))
 	})
 

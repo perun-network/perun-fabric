@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package client_test
+package client_test //nolint:dupl
 
 import (
 	"context"
@@ -70,8 +70,8 @@ func TestDisputeMalloryCarol(t *testing.T) {
 			Funder:            adjs[i].Funder,
 			Adjudicator:       adjs[i].Adjudicator,
 			Wallet:            test.RandomWallet(),
-			Timeout:           60 * time.Second, // Timeout waiting for other role, not challenge duration.
-			ChallengeDuration: 60,
+			Timeout:           30 * time.Second, // Timeout waiting for other role, not challenge duration.
+			ChallengeDuration: 10,
 			Watcher:           watcher,
 		}
 

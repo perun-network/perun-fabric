@@ -27,14 +27,17 @@ const (
 	defaultFunderPollingInterval = 1 * time.Second
 )
 
+// Funder provides functionality for channel funding.
 type Funder struct {
-	binding *binding.Adjudicator // binding gives access to the AssetHolder contract.
+	binding *binding.Adjudicator // binding gives access to the chaincode.
 	polling time.Duration        // The polling interval to wait for complete funding.
 	m       sync.Mutex           // m prevents sending parallel transactions.
 }
 
+// FunderOpt extends the constructor of Funder.
 type FunderOpt func(*Funder)
 
+// WithPollingInterval overwrites the polling interval to check for funding completion.
 func WithPollingInterval(d time.Duration) FunderOpt {
 	return func(f *Funder) {
 		f.polling = d
