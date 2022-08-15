@@ -153,14 +153,9 @@ func (a *Adjudicator) Withdraw(swr SignedWithdrawReq) (*big.Int, error) {
 	}
 
 	// Send funds back.
-	transferErr := a.asset.Transfer(a.identifier, swr.Req.Receiver, holding)
+	err = a.asset.Transfer(a.identifier, swr.Req.Receiver, holding)
 	if err != nil {
-		// Ensure funds not stuck in channel if withdraw fails.
-		rollbackErr := a.holdings.Deposit(swr.Req.ID, swr.Req.Part, holding)
-		if rollbackErr != nil {
-			return nil, rollbackErr
-		}
-		return nil, transferErr
+		return nil, err
 	}
 	return holding, nil
 }
@@ -199,15 +194,7 @@ func (a *Adjudicator) Deposit(calleeID string, chID channel.ID, part wallet.Addr
 	}
 
 	// Register deposit.
-	err = a.holdings.Deposit(chID, part, amount)
-	if err != nil {
-		// Ensure funds not stuck in channel if deposit fails.
-		rollbackErr := a.asset.Transfer(a.identifier, calleeID, amount)
-		if rollbackErr != nil {
-			return rollbackErr
-		}
-	}
-	return err
+	return a.holdings.Deposit(chID, part, amount)
 }
 
 // Holding returns the current holding amount of the given participant in the channel.
