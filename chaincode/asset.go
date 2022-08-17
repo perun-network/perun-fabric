@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"math/big"
 )
 
@@ -22,7 +23,7 @@ func NewStubAsset(ctx contractapi.TransactionContextInterface) *StubAsset {
 
 // Mint creates the desired amount of token for the given id.
 // The id must be the callee of the transaction invoking Mint.
-func (s StubAsset) Mint(id string, amount *big.Int) error {
+func (s StubAsset) Mint(id adj.AccountID, amount *big.Int) error {
 	// Check if id == centralBanker.
 	if id != centralBankerID {
 		return fmt.Errorf("minter must be central banker")
@@ -39,7 +40,7 @@ func (s StubAsset) Mint(id string, amount *big.Int) error {
 		return err
 	}
 	current.Add(current, amount)
-	if err := s.Stub.PutState(id, current.Bytes()); err != nil {
+	if err := s.Stub.PutState(string(id), current.Bytes()); err != nil {
 		return fmt.Errorf("stub.PutState: %w", err)
 	}
 	return nil
@@ -47,7 +48,7 @@ func (s StubAsset) Mint(id string, amount *big.Int) error {
 
 // Burn removes the desired amount of token from the given id.
 // The id must be the callee of the transaction invoking Burn.
-func (s StubAsset) Burn(id string, amount *big.Int) error {
+func (s StubAsset) Burn(id adj.AccountID, amount *big.Int) error {
 	// Check if id == centralBanker.
 	if id != centralBankerID {
 		return fmt.Errorf("burner must be central banker")
@@ -69,7 +70,7 @@ func (s StubAsset) Burn(id string, amount *big.Int) error {
 		return fmt.Errorf("not enought funds to burn the requested amount")
 	}
 
-	if err := s.Stub.PutState(id, current.Bytes()); err != nil {
+	if err := s.Stub.PutState(string(id), current.Bytes()); err != nil {
 		return fmt.Errorf("stub.PutState: %w", err)
 	}
 	return nil
@@ -78,7 +79,7 @@ func (s StubAsset) Burn(id string, amount *big.Int) error {
 // Transfer checks if the proposed transfer is valid and
 // transfers the given amount of coins from the sender to the receiver.
 // The sender must be the callee of the transaction invoking Transfer.
-func (s StubAsset) Transfer(sender string, receiver string, amount *big.Int) error {
+func (s StubAsset) Transfer(sender adj.AccountID, receiver adj.AccountID, amount *big.Int) error {
 	// Check zero/negative amount.
 	if amount.Cmp(big.NewInt(0)) < 0 {
 		return fmt.Errorf("cannot transfer negative amount")
@@ -102,10 +103,10 @@ func (s StubAsset) Transfer(sender string, receiver string, amount *big.Int) err
 	receiverBal.Add(receiverBal, amount)
 
 	// Store new balances.
-	if err := s.Stub.PutState(sender, senderBal.Bytes()); err != nil {
+	if err := s.Stub.PutState(string(sender), senderBal.Bytes()); err != nil {
 		return fmt.Errorf("stub.PutState: %w", err)
 	}
-	if err := s.Stub.PutState(receiver, receiverBal.Bytes()); err != nil {
+	if err := s.Stub.PutState(string(receiver), receiverBal.Bytes()); err != nil {
 		return fmt.Errorf("stub.PutState: %w", err)
 	}
 	return nil
@@ -113,8 +114,8 @@ func (s StubAsset) Transfer(sender string, receiver string, amount *big.Int) err
 
 // BalanceOf returns the amount of tokens the given id holds.
 // If the id is unknown, zero is returned.
-func (s StubAsset) BalanceOf(id string) (*big.Int, error) {
-	srb, err := s.Stub.GetState(id)
+func (s StubAsset) BalanceOf(id adj.AccountID) (*big.Int, error) {
+	srb, err := s.Stub.GetState(string(id))
 	if err != nil {
 		return nil, fmt.Errorf("stub.GetState: %w", err)
 	} else if srb == nil {

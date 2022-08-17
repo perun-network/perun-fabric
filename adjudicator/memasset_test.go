@@ -16,7 +16,7 @@ func TestMemAsset(t *testing.T) {
 		require := require.New(t)
 		ma := adj.NewMemAsset()
 		acc := wallet.NewRandomAccount(rng)
-		addr := acc.Address().String()
+		addr := adj.AccountID(acc.Address().String())
 
 		// Mint (incremental).
 		require.NoError(ma.Mint(addr, big.NewInt(100)))
@@ -33,7 +33,7 @@ func TestMemAsset(t *testing.T) {
 		require := require.New(t)
 		ma := adj.NewMemAsset()
 		acc := wallet.NewRandomAccount(rng)
-		addr := acc.Address().String()
+		addr := adj.AccountID(acc.Address().String())
 
 		// Mint.
 		require.NoError(ma.Mint(addr, big.NewInt(150)))
@@ -51,8 +51,8 @@ func TestMemAsset(t *testing.T) {
 	t.Run("Transfer-to-address", func(t *testing.T) {
 		require := require.New(t)
 		ma := adj.NewMemAsset()
-		addrOne := wallet.NewRandomAccount(rng).Address().String()
-		addrTwo := wallet.NewRandomAccount(rng).Address().String()
+		addrOne := adj.AccountID(wallet.NewRandomAccount(rng).Address().String())
+		addrTwo := adj.AccountID(wallet.NewRandomAccount(rng).Address().String())
 
 		// Mint.
 		require.NoError(ma.Mint(addrOne, big.NewInt(150)))
@@ -79,8 +79,8 @@ func TestMemAsset(t *testing.T) {
 	t.Run("Transfer-negative", func(t *testing.T) {
 		require := require.New(t)
 		ma := adj.NewMemAsset()
-		addrOne := wallet.NewRandomAccount(rng).Address().String()
-		addrTwo := wallet.NewRandomAccount(rng).Address().String()
+		addrOne := adj.AccountID(wallet.NewRandomAccount(rng).Address().String())
+		addrTwo := adj.AccountID(wallet.NewRandomAccount(rng).Address().String())
 
 		// Mint.
 		require.NoError(ma.Mint(addrOne, big.NewInt(150)))
@@ -105,8 +105,8 @@ func TestMemAsset(t *testing.T) {
 	t.Run("Transfer-not-enough-funds", func(t *testing.T) {
 		require := require.New(t)
 		ma := adj.NewMemAsset()
-		addrOne := wallet.NewRandomAccount(rng).Address().String()
-		addrTwo := wallet.NewRandomAccount(rng).Address().String()
+		addrOne := adj.AccountID(wallet.NewRandomAccount(rng).Address().String())
+		addrTwo := adj.AccountID(wallet.NewRandomAccount(rng).Address().String())
 
 		// Mint.
 		require.NoError(ma.Mint(addrOne, big.NewInt(50)))

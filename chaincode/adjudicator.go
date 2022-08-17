@@ -38,7 +38,7 @@ func (a *Adjudicator) Deposit(ctx contractapi.TransactionContextInterface,
 		return err
 	}
 
-	return a.contract(ctx).Deposit(calleeID, chID, part, amount)
+	return a.contract(ctx).Deposit(adj.AccountID(calleeID), chID, part, amount)
 }
 
 // Holding unmarshalls the given arguments to forward the holding request.
@@ -110,7 +110,7 @@ func (a *Adjudicator) MintToken(ctx contractapi.TransactionContextInterface,
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
 
-	err = a.contract(ctx).Mint(calleeID, amount)
+	err = a.contract(ctx).Mint(adj.AccountID(calleeID), amount)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (a *Adjudicator) BurnToken(ctx contractapi.TransactionContextInterface,
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
 
-	err = a.contract(ctx).Burn(calleeID, amount)
+	err = a.contract(ctx).Burn(adj.AccountID(calleeID), amount)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (a *Adjudicator) TransferToken(ctx contractapi.TransactionContextInterface,
 		return fmt.Errorf("parsing big.Int string %q failed", amountStr)
 	}
 
-	err = a.contract(ctx).Transfer(calleeID, receiverID, amount)
+	err = a.contract(ctx).Transfer(adj.AccountID(calleeID), receiverID, amount)
 	if err != nil {
 		return err
 	}

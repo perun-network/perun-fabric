@@ -123,8 +123,8 @@ func (a *Adjudicator) BurnToken(amount *big.Int) error {
 }
 
 // TokenTransfer marshals the given parameters and sends a token transfer request to the Adjudicator chaincode.
-func (a *Adjudicator) TokenTransfer(receiverID string, amount *big.Int) error {
-	args, err := pkgjson.MultiMarshal(receiverID, amount)
+func (a *Adjudicator) TokenTransfer(receiver adj.AccountID, amount *big.Int) error {
+	args, err := pkgjson.MultiMarshal(receiver, amount)
 	if err != nil {
 		return err
 	}
@@ -134,8 +134,8 @@ func (a *Adjudicator) TokenTransfer(receiverID string, amount *big.Int) error {
 
 // TokenBalance marshals the given owner id and sends a token balance request to the Adjudicator chaincode.
 // The response contains the amount of tokens the given owner id holds.
-func (a *Adjudicator) TokenBalance(ownerID string) (*big.Int, error) {
-	arg, err := json.Marshal(ownerID)
+func (a *Adjudicator) TokenBalance(owner adj.AccountID) (*big.Int, error) {
+	arg, err := json.Marshal(owner)
 	if err != nil {
 		return nil, err
 	}

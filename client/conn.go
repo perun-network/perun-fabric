@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"os"
 
 	"github.com/hyperledger/fabric-gateway/pkg/identity"
@@ -52,7 +53,7 @@ func NewGrpcConnection(gatewayPeer, peerEndpoint, peerTLSCertPath string) (*grpc
 
 // NewIdentity creates a client identity for a Gateway connection using an X.509
 // certificate. It also returns the corresponding Fabric backend Address.
-func NewIdentity(mspID, certPath string) (*identity.X509Identity, *wallet.Address, string, error) {
+func NewIdentity(mspID, certPath string) (*identity.X509Identity, *wallet.Address, adj.AccountID, error) {
 	cert, err := ReadCertificate(certPath)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("loading certificate: %w", err)
@@ -73,7 +74,7 @@ func NewIdentity(mspID, certPath string) (*identity.X509Identity, *wallet.Addres
 		return nil, nil, "", fmt.Errorf("creating On Chain Idenity: %w", err)
 	}
 
-	return id, addr, onChainID, nil
+	return id, addr, adj.AccountID(onChainID), nil
 }
 
 // NewAccountWithSigner generates a new account and singer based on the given path of the private key file.

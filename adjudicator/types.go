@@ -40,7 +40,7 @@ type (
 	WithdrawReq struct {
 		ID       channel.ID     `json:"id"`
 		Part     wallet.Address `json:"part"`
-		Receiver string         `json:"receiver"`
+		Receiver AccountID      `json:"receiver"`
 	}
 
 	// SignedWithdrawReq contains a signature over a WithdrawReq to check its validity.
@@ -236,7 +236,7 @@ func ConvertToSignedChannel(req channel.AdjudicatorReq) (*SignedChannel, error) 
 }
 
 // SignWithdrawRequest generates a WithdrawReq and signs it with the given account to return a SignedWithdrawReq.
-func SignWithdrawRequest(acc wallet.Account, channel channel.ID, receiver string) (*SignedWithdrawReq, error) {
+func SignWithdrawRequest(acc wallet.Account, channel channel.ID, receiver AccountID) (*SignedWithdrawReq, error) {
 	req := WithdrawReq{
 		ID:       channel,
 		Part:     acc.Address(),
@@ -254,7 +254,20 @@ func SignWithdrawRequest(acc wallet.Account, channel channel.ID, receiver string
 	}, nil
 }
 
-// UnmarshalJSON implements custom unmarshalling for WithdrawReq to deal with the participant address.
+// MarshalJSON implements custom marshalling for WithdrawReq to deal with custom data types.
+func (wr *WithdrawReq) MarshalJSON() ([]byte, error) {
+	var wrj struct {
+		ID       channel.ID     `json:"id"`
+		Part     wallet.Address `json:"part"`
+		Receiver string         `json:"receiver"`
+	}
+	wrj.ID = wr.ID
+	wrj.Part = wr.Part
+	wrj.Receiver = string(wr.Receiver)
+	return json.Marshal(wrj)
+}
+
+// UnmarshalJSON implements custom unmarshalling for WithdrawReq to deal with custom data types.
 func (wr *WithdrawReq) UnmarshalJSON(data []byte) error {
 	var wrj struct {
 		ID       channel.ID      `json:"id"`
@@ -266,7 +279,7 @@ func (wr *WithdrawReq) UnmarshalJSON(data []byte) error {
 	}
 
 	wr.ID = wrj.ID
-	wr.Receiver = wrj.Receiver
+	wr.Receiver = AccountID(wrj.Receiver)
 
 	part := wallet.NewAddress()
 	parti := part.(interface{}) //nolint:forcetypeassert
@@ -300,7 +313,7 @@ func (swr SignedWithdrawReq) Verify(addr wallet.Address) (bool, error) {
 // Encode encodes a withdraw request into an `io.Writer` or returns an `error`.
 func (wr WithdrawReq) Encode(w io.Writer) error {
 	return errors.WithMessage(
-		perunio.Encode(w, wr.ID, wr.Part, wr.Receiver), "WithdrawReq encode")
+		perunio.Encode(w, wr.ID, wr.Part, string(wr.Receiver)), "WithdrawReq encode")
 }
 
 // Decode decodes a withdraw request from an `io.Reader` or returns an `error`.

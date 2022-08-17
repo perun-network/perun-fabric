@@ -40,13 +40,13 @@ func TestAdjudicator(t *testing.T) { //nolint:maintidx
 		// Deposit twice each to test additivity.
 		// As the client identification the participant address (string) is used.
 		for i := 0; i < 2; i++ {
-			require.NoError(s.Adj.Deposit(s.Params.Parts[i].String(), s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
-			require.NoError(s.Adj.Deposit(s.Params.Parts[i].String(), s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
+			require.NoError(s.Adj.Deposit(s.IDs[i], s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
+			require.NoError(s.Adj.Deposit(s.IDs[i], s.State.ID, s.Params.Parts[i], s.State.Balances[i]))
 		}
 
 		// Token balance for parts must be zero.
 		for i := 0; i < 2; i++ {
-			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String())
+			bal, err := s.Adj.BalanceOfID(s.IDs[i])
 			require.Equal(big.NewInt(0), bal)
 			require.NoError(err)
 		}
@@ -82,8 +82,8 @@ func TestAdjudicator(t *testing.T) { //nolint:maintidx
 		require.NoError(err)
 		require.Zero(th.Sign())
 
-		require.NoError(s.Adj.Deposit(s.Params.Parts[0].String(), s.State.ID, s.Params.Parts[0], s.State.Balances[0]))
-		require.Error(s.Adj.Deposit(s.Params.Parts[1].String(), s.State.ID, s.Params.Parts[1], s.State.Balances[1]))
+		require.NoError(s.Adj.Deposit(s.IDs[0], s.State.ID, s.Params.Parts[0], s.State.Balances[0]))
+		require.Error(s.Adj.Deposit(s.IDs[1], s.State.ID, s.Params.Parts[1], s.State.Balances[1]))
 	})
 
 	t.Run("Register", func(t *testing.T) {
@@ -166,7 +166,7 @@ func TestAdjudicator(t *testing.T) { //nolint:maintidx
 
 		// Token balance for parts must be zero.
 		for i := 0; i < 2; i++ {
-			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String())
+			bal, err := s.Adj.BalanceOfID(s.IDs[i])
 			require.Equal(big.NewInt(0), bal)
 			require.NoError(err)
 		}
@@ -181,7 +181,7 @@ func TestAdjudicator(t *testing.T) { //nolint:maintidx
 		s.Ledger.AdvanceNow(s.Params.ChallengeDuration + 1)
 
 		for i := 0; i < 2; i++ {
-			req, err := adj.SignWithdrawRequest(s.Accs[i], adjsr.ID, s.Parts[i].String())
+			req, err := adj.SignWithdrawRequest(s.Accs[i], adjsr.ID, s.IDs[i])
 			require.NoError(err)
 			_, err = s.Adj.Withdraw(*req)
 			require.NoError(err)
@@ -189,7 +189,7 @@ func TestAdjudicator(t *testing.T) { //nolint:maintidx
 
 		// Token balance for parts must be the original value.
 		for i := 0; i < 2; i++ {
-			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String())
+			bal, err := s.Adj.BalanceOfID(s.IDs[i])
 			require.Equal(s.State.Balances[i], bal)
 			require.NoError(err)
 		}
@@ -201,7 +201,7 @@ func TestAdjudicator(t *testing.T) { //nolint:maintidx
 
 		// Token balance for parts must be zero.
 		for i := 0; i < 2; i++ {
-			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String())
+			bal, err := s.Adj.BalanceOfID(s.IDs[i])
 			require.Equal(big.NewInt(0), bal)
 			require.NoError(err)
 		}
@@ -216,14 +216,14 @@ func TestAdjudicator(t *testing.T) { //nolint:maintidx
 		s.Ledger.AdvanceNow(s.Params.ChallengeDuration + 1)
 
 		// Party 0 tries to withdraw party 1's funds.
-		req, err := adj.SignWithdrawRequest(s.Accs[0], adjsr.ID, s.Parts[0].String())
+		req, err := adj.SignWithdrawRequest(s.Accs[0], adjsr.ID, s.IDs[0])
 		require.NoError(err)
 		req.Req.Part = s.Accs[1].Address()
 		_, err = s.Adj.Withdraw(*req)
 		require.Error(err)
 
 		// Party 1 tries to withdraw party 0's funds.
-		req, err = adj.SignWithdrawRequest(s.Accs[1], adjsr.ID, s.Parts[1].String())
+		req, err = adj.SignWithdrawRequest(s.Accs[1], adjsr.ID, s.IDs[1])
 		require.NoError(err)
 		req.Req.Part = s.Accs[0].Address()
 		_, err = s.Adj.Withdraw(*req)
@@ -231,7 +231,7 @@ func TestAdjudicator(t *testing.T) { //nolint:maintidx
 
 		// Check if valid withdraw still possible.
 		for i := 0; i < 2; i++ {
-			req, err := adj.SignWithdrawRequest(s.Accs[i], adjsr.ID, s.Parts[i].String())
+			req, err := adj.SignWithdrawRequest(s.Accs[i], adjsr.ID, s.IDs[i])
 			require.NoError(err)
 			_, err = s.Adj.Withdraw(*req)
 			require.NoError(err)
@@ -239,7 +239,7 @@ func TestAdjudicator(t *testing.T) { //nolint:maintidx
 
 		// Token balance for parts must be the original value.
 		for i := 0; i < 2; i++ {
-			bal, err := s.Adj.BalanceOfID(s.Params.Parts[i].String())
+			bal, err := s.Adj.BalanceOfID(s.IDs[i])
 			require.Equal(s.State.Balances[i], bal)
 			require.NoError(err)
 		}

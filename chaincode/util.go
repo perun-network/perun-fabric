@@ -5,6 +5,7 @@ package chaincode
 import (
 	"encoding/json"
 	"fmt"
+	adj "github.com/perun-network/perun-fabric/adjudicator"
 
 	"perun.network/go-perun/wallet"
 
@@ -19,12 +20,12 @@ func stringWithErr(s fmt.Stringer, err error) (string, error) {
 }
 
 // UnmarshalID unmarshalls a fabric ID.
-func UnmarshalID(idStr string) (string, error) {
+func UnmarshalID(idStr string) (adj.AccountID, error) {
 	id := ""
 	if err := json.Unmarshal([]byte(idStr), &id); err != nil {
-		return id, fmt.Errorf("json-unmarshaling Client ID: %w", err)
+		return adj.AccountID(id), fmt.Errorf("json-unmarshaling Client ID: %w", err)
 	}
-	return id, nil
+	return adj.AccountID(id), nil
 }
 
 // UnmarshalAddress implements custom unmarshalling of wallet addresses.

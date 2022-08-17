@@ -33,7 +33,7 @@ const (
 type Adjudicator struct {
 	binding  *binding.Adjudicator // binding gives access to the Adjudicator contract.
 	polling  time.Duration        // The polling interval for event subscription.
-	receiver string               // The fabric id of the receiver of the funds for withdrawal.
+	receiver adj.AccountID        // The fabric id of the receiver of the funds for withdrawal.
 }
 
 // AdjudicatorOpt allows to extend the Adjudicator constructor.
@@ -47,7 +47,7 @@ func WithSubPollingInterval(d time.Duration) AdjudicatorOpt {
 }
 
 // NewAdjudicator generates an Adjudicator and requires to preset the fabric ID used for withdrawal.
-func NewAdjudicator(network *client.Network, chaincode string, withdrawTo string, opts ...AdjudicatorOpt) *Adjudicator {
+func NewAdjudicator(network *client.Network, chaincode string, withdrawTo adj.AccountID, opts ...AdjudicatorOpt) *Adjudicator {
 	a := &Adjudicator{
 		binding:  binding.NewAdjudicatorBinding(network, chaincode),
 		polling:  defaultAdjPollingInterval,

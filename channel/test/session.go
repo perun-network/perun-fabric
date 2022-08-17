@@ -17,6 +17,7 @@ package test
 import (
 	"fmt"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
+	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"github.com/perun-network/perun-fabric/channel"
 	"github.com/perun-network/perun-fabric/channel/binding"
 	"github.com/perun-network/perun-fabric/wallet"
@@ -25,7 +26,7 @@ import (
 
 // Session contains all parts to test the fabric backend with a specific party.
 type Session struct {
-	ClientFabricID string
+	ClientFabricID adj.AccountID
 	Adjudicator    *channel.Adjudicator
 	Binding        *binding.Adjudicator
 	Funder         *channel.Funder

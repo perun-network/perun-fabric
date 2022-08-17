@@ -12,19 +12,19 @@ import (
 
 // Adjudicator is an abstract implementation of the adjudicator smart contract.
 type Adjudicator struct {
-	ledger     Ledger
-	asset      Asset
-	holdings   *AssetHolder
-	identifier string
+	ledger     Ledger       // ledger stores channel states.
+	holdings   *AssetHolder // holdings manages per channel holdings.
+	asset      Asset        // asset is the Asset the channels use. It can also be used independently of the channels.
+	identifier AccountID    // identifier is the chaincode id for sending and receiving funds on.
 }
 
 // NewAdjudicator generates a new Adjudicator with an identifier, holding ledger and asset ledger.
 func NewAdjudicator(id string, ledger Ledger, asset Asset) *Adjudicator {
 	return &Adjudicator{
 		ledger:     ledger,
-		asset:      asset,
 		holdings:   NewAssetHolder(ledger),
-		identifier: id,
+		asset:      asset,
+		identifier: AccountID(id),
 	}
 }
 
@@ -190,9 +190,9 @@ func ValidateChannel(ch *SignedChannel) error {
 
 // Deposit transfers the given amount of coins from the callee to the channel with the specified channel ID.
 // The funds are stored in the channel under the participant's wallet address.
-func (a *Adjudicator) Deposit(calleeID string, chID channel.ID, part wallet.Address, amount *big.Int) error {
+func (a *Adjudicator) Deposit(callee AccountID, chID channel.ID, part wallet.Address, amount *big.Int) error {
 	// Transfer funds to channel.
-	err := a.asset.Transfer(calleeID, a.identifier, amount)
+	err := a.asset.Transfer(callee, a.identifier, amount)
 	if err != nil {
 		return err
 	}
@@ -212,21 +212,21 @@ func (a *Adjudicator) TotalHolding(id channel.ID, parts []wallet.Address) (*big.
 }
 
 // Mint generates the given amount of asset tokens for the callee.
-func (a *Adjudicator) Mint(calleeID string, amount *big.Int) error {
-	return a.asset.Mint(calleeID, amount)
+func (a *Adjudicator) Mint(callee AccountID, amount *big.Int) error {
+	return a.asset.Mint(callee, amount)
 }
 
 // Burn destroys the given amount of asset tokens for the callee.
-func (a *Adjudicator) Burn(calleeID string, amount *big.Int) error {
-	return a.asset.Burn(calleeID, amount)
+func (a *Adjudicator) Burn(callee AccountID, amount *big.Int) error {
+	return a.asset.Burn(callee, amount)
 }
 
 // Transfer sends the given amount of asset tokens from the sender to the receiver.
-func (a *Adjudicator) Transfer(senderID string, receiverID string, amount *big.Int) error {
-	return a.asset.Transfer(senderID, receiverID, amount)
+func (a *Adjudicator) Transfer(sender AccountID, receiver AccountID, amount *big.Int) error {
+	return a.asset.Transfer(sender, receiver, amount)
 }
 
 // BalanceOfID returns the asset token balance of the given user identifier.
-func (a *Adjudicator) BalanceOfID(userID string) (*big.Int, error) {
-	return a.asset.BalanceOf(userID)
+func (a *Adjudicator) BalanceOfID(id AccountID) (*big.Int, error) {
+	return a.asset.BalanceOf(id)
 }

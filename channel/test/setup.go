@@ -16,6 +16,7 @@ package test
 
 import (
 	"fmt"
+	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"log"
 	"os"
 	"path"
@@ -124,7 +125,7 @@ func NewGrpcConnection(org Org) (*grpc.ClientConn, error) {
 }
 
 // NewIdentity creates a client identity for this Gateway connection using an X.509 certificate.
-func NewIdentity(org Org) (*identity.X509Identity, *wallet.Address, string, error) {
+func NewIdentity(org Org) (*identity.X509Identity, *wallet.Address, adj.AccountID, error) {
 	return pclient.NewIdentity(mspID(org), certPath(org))
 }
 
@@ -138,7 +139,7 @@ func NewAccountWithSigner(org Org) (identity.Sign, *wallet.Account, error) {
 }
 
 // NewGateway creates a Gateway for a specific client identity with several timeouts for gRPC calls.
-func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.Account, string, error) {
+func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.Account, adj.AccountID, error) {
 	id, addr, onChainID, err := NewIdentity(org)
 	if err != nil {
 		return nil, nil, "", err

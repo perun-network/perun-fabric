@@ -24,6 +24,7 @@ const (
 type (
 	// Setup provides necessary elements for testing.
 	Setup struct {
+		IDs     []adj.AccountID
 		Parts   []wallet.Address
 		Accs    []wallet.Account
 		Params  *adj.Params
@@ -81,7 +82,10 @@ func NewSetup(rng *rand.Rand, opts ...SetupOption) *Setup {
 	}
 	ledger := NewTestLedger()
 	asset := adj.NewMemAsset()
+	ids := []adj.AccountID{adj.AccountID(parts[0].String()), adj.AccountID(parts[1].String())}
+
 	s := &Setup{
+		IDs:    ids,
 		Parts:  parts,
 		Accs:   accs,
 		Params: params,
@@ -156,8 +160,8 @@ func WithMintedTokens(fund ...*big.Int) SetupOption {
 				len(fund), n))
 		}
 
-		for i, part := range s.Parts {
-			_ = s.Adj.Mint(part.String(), fund[i])
+		for i, id := range s.IDs {
+			_ = s.Adj.Mint(id, fund[i])
 		}
 	})
 }
@@ -165,10 +169,10 @@ func WithMintedTokens(fund ...*big.Int) SetupOption {
 // Funded performs minting and deposit for all participants.
 // Therefore, the state channel is prefunded.
 var Funded = setupModifier(func(s *Setup) {
-	id := s.State.ID
+	chID := s.State.ID
 	for i, part := range s.Parts {
-		_ = s.Adj.Mint(part.String(), s.State.Balances[i])
-		if err := s.Adj.Deposit(part.String(), id, part, s.State.Balances[i]); err != nil {
+		_ = s.Adj.Mint(s.IDs[i], s.State.Balances[i])
+		if err := s.Adj.Deposit(s.IDs[i], chID, part, s.State.Balances[i]); err != nil {
 			panic(fmt.Sprintf("Setup: error funding participant[%d]: %v", i, err))
 		}
 	}
