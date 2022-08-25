@@ -2,7 +2,7 @@
 
 <p>
   <a href="https://www.apache.org/licenses/LICENSE-2.0.txt"><img src="https://img.shields.io/badge/license-Apache%202-blue" alt="License: Apache 2.0"></a>
-  <a href="https://github.com/hyperledger-labs/perun-eth-backend/actions/workflows/ci.yml"><img src="https://github.com/hyperledger-labs/perun-eth-backend/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="https://github.com/perun-network/perun-fabric/actions/workflows/ci.yml"><img src="https://github.com/perun-network/perun-fabric/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
 </p>
 
 This repository provides the chaincode and [go-perun](https://github.com/hyperledger-labs/go-perun/) backend implementation
