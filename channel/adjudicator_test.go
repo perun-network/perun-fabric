@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package adjudicator_test
+package channel_test
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	testTimeout = 120 * time.Second
+	adjTestTimeout = 120 * time.Second
 )
 
 func TestAdjudicator(t *testing.T) {
@@ -39,7 +39,7 @@ func TestAdjudicator(t *testing.T) {
 func withSubscriptionCollaborative(t *testing.T) {
 	require := requ.New(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), adjTestTimeout)
 	defer cancel()
 
 	var adjs []*test.Session
@@ -137,7 +137,7 @@ func withSubscriptionCollaborative(t *testing.T) {
 func withSubscriptionDispute(t *testing.T) {
 	require := requ.New(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), adjTestTimeout)
 	defer cancel()
 
 	var adjs []*test.Session

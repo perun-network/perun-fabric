@@ -28,7 +28,7 @@ import (
 	adjtest "github.com/perun-network/perun-fabric/adjudicator/test"
 )
 
-func TestBinding(t *testing.T) {
+func TestAdjudicatorBinding(t *testing.T) {
 	require := requ.New(t)
 	var adjs []*test.Session
 	for i := uint(1); i <= 2; i++ {

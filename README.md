@@ -1,82 +1,64 @@
-# go-perun - Hyperledger Fabric Chaincode and Backend
+# Perun's Hyperledger Fabric Chaincode and Backend
 
-Chaincode and [go-perun](https://github.com/hyperledger-labs/go-perun/) backend implementation
+<p>
+  <a href="https://www.apache.org/licenses/LICENSE-2.0.txt"><img src="https://img.shields.io/badge/license-Apache%202-blue" alt="License: Apache 2.0"></a>
+  <a href="https://github.com/hyperledger-labs/perun-eth-backend/actions/workflows/ci.yml"><img src="https://github.com/hyperledger-labs/perun-eth-backend/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+</p>
+
+This repository provides the chaincode and [go-perun](https://github.com/hyperledger-labs/go-perun/) backend implementation
 for [Hyperledger Fabric](https://github.com/hyperledger/fabric).
 
-## Packages
+## Project structure
+* `adjudicator/`: On-chain logic. Memory implementations for off-chain testing.
+* `chaincode/`: Chaincode endpoint, ledger and asset implementation.
+* `channel/`: Off-chain logic. Channel interface implementations.
+    * `binding/` Chaincode bindings.
+* `client/`: Helper functions for setting up a *go-perun* client.
+    * `test/` End-2-end tests.
+* `pkg/`: 3rd-party helpers.
+* `scripts/`: Test environment setup.
+* `wallet/`: Wallet interface implementations.
 
-### go-perun Backend
+## Development Setup
+If you want to locally develop with this project:
 
-Packages `wallet` and `channel` implement the `go-perun` Fabric backend. To use the backend in Go, do
-
-```go
-import _ "github.com/perun-network/perun-fabric"
-```
-
-This sets the `wallet` and `channel` backends and randomizers in go-perun via
-`init()` functions.
-
-`Address`es and `Account`s are realized as `ecdsa.PublicKey`s and `PrivateKey`s, because these are the only keys
-actually used in Fabric.
-
-### `adjudicator`
-
-Package `adjudicator` implements a backend-independent Adjudicator smart contract. It is a single-asset, two party
-payment channel Adjudicator. It allows for an injectable ledger, on which state registrations and participant holdings
-are stored. There is a `MemLedger` implementation that stores values in memory, which is used in tests.
-Package `chaincode` includes a `StubLedger`, which uses a Fabric blockchain as storage.
-
-An `Adjudicator` contains an `AssetHolder`, which defines the logic for funds management and works on a `HoldingLedger`
-interface. Complex asset holding scenarios can be implemented through this `HoldingLedger` abstraction.
-
-### `chaincode`
-
-Package `chaincode` implements concrete Fabric Chaincode instances of the abstract `Adjudicator` and `AssetHolder` smart
-contracts. In this sense, they are mere shims - all actual logic is implemented in the abstract smart contracts.
-
-The `Deposit` and `Withdraw` functions use the transaction sender from the transaction context as the affected party,
-realizing proper access control.
-
-The `StubLedger` is an `adjudicator.Ledger` implementation that operates on a Fabric network.
-
-### `tests`
-
-Package `tests` contains end-2-end tests of the `Adjudicator` and `AssetHolder`
-chaincodes. The files `tests/*/contract.go` show how to call/bind to chaincode. The tests itself then show how
-client-side code can be written. File `setup.go` contains client setup code with respect to the Fabric
-`test-network` from the `fabric-samples` repository, see below.
-
-### `client`
-
-Package `client` contains convenience functions for setting up
-[`fabric-gateway`](https://github.com/hyperledger/fabric-gateway) client connections, in particular reading of PEM
-certificates and private keys from files. It is used by the `tests` package.
-
-## Testing
-
-The Go unit tests can be run as usual with `go test ./...`. The Github CI also runs those tests.
-
-The end-2-end tests can be run using the script `scripts/end2end.sh`. They require
-the [`fabric-samples`](https://github.com/hyperledger/fabric-samples)
-repository to be checked out locally because the scripts in `test-network` are used to setup a Fabric network. By
-default, the `end2end.sh` script assumes the
-`fabric-samples` repository to be checked out in the same directory as the
-`perun-fabric` repository. If it is somewhere else, the script must be told about its location via the environment
-variable `FABRIC_SAMPLES_DIR` (whose default is `../fabric-samples`). [Docker](https://www.docker.com/) also needs to be
-installed and the current user must have the correct system privileges to control it.
-
-When all prerequisites are met, the end-2-end tests can be simply run like
-
+1. Setup the [fabric-samples](https://github.com/hyperledger/fabric-samples) test environment and add its directory as `FABRIC_SAMPLES_DIR` to your path.
 ```sh
-scripts/end2end.sh adjudicator
+curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/v2.4.6/scripts/bootstrap.sh | bash -s
+FABRIC_SAMPLES_DIR=$(pwd)/fabric-samples/
 ```
 
-where the first and only argument specifies the chaincode to deploy and test, currently `assetholder` or `adjudicator`,
-or `down` to shut down the network.
+2. Clone this repo.
+```sh
+git clone https://github.com/perun-network/perun-fabric.git
+cd perun-fabric
+```
 
-End-2-end tests can run multiple times without restarting the network every time. This is realized by deploying the
-chaincode to a new random instance name every time. When you're done running end-2-end tests, shut down the network with
-argument `down`.
+ 3. Start the test chain and deploy the chaincode. This step needs a working [Docker](https://www.docker.com) instance running in the background.
+```sh
+./scripts/deployCC.sh
+```
+
+4. Run the tests. This step needs a working [Go distribution](https://golang.org), see [go.mod](go.mod) for the required version. Always ensure that `FABRIC_SAMPLES_DIR` is set.
+```sh
+go test ./... -p 1
+```
+
+
+Further, you can shut down the test environment.
+```sh
+./scripts/network.sh down
+```
+
+Or start the test environment without chaincode deployment.
+```sh
+./scripts/network.sh up
+```
+
+## Security Disclaimer
+
+This software is still under development.
+The authors take no responsibility for any loss of digital assets or other damage caused by the use of it.
 
 ## Copyright
 

@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package assetholder_test
+package binding_test
 
 import (
 	"github.com/perun-network/perun-fabric/channel/binding"
@@ -28,7 +28,7 @@ import (
 	_ "github.com/perun-network/perun-fabric" // init backend
 )
 
-func TestAssetholder(t *testing.T) {
+func TestAssetHolderBinding(t *testing.T) {
 	require := requ.New(t)
 	org := test.OrgNum(1)
 	clientConn, err := test.NewGrpcConnection(org)

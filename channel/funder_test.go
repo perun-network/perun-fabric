@@ -12,7 +12,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package funder_test
+package channel_test
 
 import (
 	"context"
@@ -27,12 +27,12 @@ import (
 )
 
 const (
-	testTimeout = 30 * time.Second
-	nrClients   = 2
+	chTestTimeout = 30 * time.Second
+	nrClients     = 2
 )
 
 func TestFunder(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), chTestTimeout)
 	defer cancel()
 
 	clients := [nrClients]FunderTestClient{}
