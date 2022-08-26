@@ -17,9 +17,11 @@ package test
 import (
 	"fmt"
 	adj "github.com/perun-network/perun-fabric/adjudicator"
+	"github.com/perun-network/perun-fabric/channel/binding"
 	"log"
 	"os"
 	"path"
+	pchannel "perun.network/go-perun/channel"
 	"time"
 
 	"github.com/hyperledger/fabric-gateway/pkg/client"
@@ -183,4 +185,25 @@ func FatalClientErr(msg string, err error) {
 	if err != nil {
 		log.Fatalf("Error %s: [%T] %+v\n%s", msg, err, err, pclient.ParseClientErr(err))
 	}
+}
+
+// BalanceReader wraps the bindings TokenBalance functionality to be used in the client end-2-end tests.
+type BalanceReader struct {
+	binding *binding.Adjudicator
+	id      adj.AccountID
+}
+
+// NewBalanceReader takes the clients binding and its fabric id to create n new BalanceReader.
+func NewBalanceReader(binding *binding.Adjudicator, id adj.AccountID) *BalanceReader {
+	return &BalanceReader{
+		binding: binding,
+		id:      id,
+	}
+}
+
+// Balance returns the on-chain balance.
+// We do not need a specific Asset here because we only got a single one.
+func (b BalanceReader) Balance(_ pchannel.Asset) pchannel.Bal {
+	balance, _ := b.binding.TokenBalance(b.id)
+	return balance
 }

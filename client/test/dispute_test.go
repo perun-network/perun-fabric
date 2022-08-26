@@ -19,13 +19,14 @@ import (
 	"fmt"
 	"github.com/perun-network/perun-fabric/channel"
 	chtest "github.com/perun-network/perun-fabric/channel/test"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	pclient "perun.network/go-perun/client"
 	clienttest "perun.network/go-perun/client/test"
 	"perun.network/go-perun/wallet/test"
 	"perun.network/go-perun/watcher/local"
 	"perun.network/go-perun/wire"
+	simplewire "perun.network/go-perun/wire/net/simple"
+	pkgtest "polycry.pt/poly-go/test"
 	"testing"
 	"time"
 )
@@ -37,15 +38,17 @@ const (
 )
 
 func TestDisputeMalloryCarol(t *testing.T) {
+	rng := pkgtest.Prng(t)
+
 	ctx, cancel := context.WithTimeout(context.Background(), disputeTestTimeout)
 	defer cancel()
 
 	const (
-		A, B = 0, 1 // Indices of Alice and Bob
+		M, C = 0, 1 // Indices of Mallory and Carol
 	)
 
 	var (
-		name  = [2]string{"Alice", "Bob"}
+		name  = [2]string{"Mallory", "Carol"}
 		role  [2]clienttest.Executer
 		setup [2]clienttest.RoleSetup
 	)
@@ -58,14 +61,13 @@ func TestDisputeMalloryCarol(t *testing.T) {
 		adjs = append(adjs, as)
 	}
 
-	var initAssetBalance [2]*big.Int
 	bus := wire.NewLocalBus()
 	for i := 0; i < len(setup); i++ {
 		// Build role setup for test.
 		watcher, _ := local.NewWatcher(adjs[i].Adjudicator)
 		setup[i] = clienttest.RoleSetup{
 			Name:              name[i],
-			Identity:          adjs[i].Account,
+			Identity:          simplewire.NewRandomAccount(rng),
 			Bus:               bus,
 			Funder:            adjs[i].Funder,
 			Adjudicator:       adjs[i].Adjudicator,
@@ -73,20 +75,16 @@ func TestDisputeMalloryCarol(t *testing.T) {
 			Timeout:           30 * time.Second, // Timeout waiting for other role, not challenge duration.
 			ChallengeDuration: 10,
 			Watcher:           watcher,
+			BalanceReader:     chtest.NewBalanceReader(adjs[i].Binding, adjs[i].ClientFabricID),
 		}
-
-		// Get current asset balances to use for checks later.
-		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
-		assert.NoError(t, err)
-		initAssetBalance[i] = balance
 	}
 
-	role[A] = clienttest.NewMallory(t, setup[A])
-	role[B] = clienttest.NewCarol(t, setup[B])
+	role[M] = clienttest.NewMallory(t, setup[M])
+	role[C] = clienttest.NewCarol(t, setup[C])
 
 	execConfig := &clienttest.MalloryCarolExecConfig{
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
-			[2]wire.Address{setup[A].Identity.Address(), setup[B].Identity.Address()},
+			[2]wire.Address{setup[M].Identity.Address(), setup[C].Identity.Address()},
 			channel.Asset,
 			[2]*big.Int{big.NewInt(malloryHolding), big.NewInt(carolHolding)},
 			pclient.WithoutApp(),
@@ -95,16 +93,5 @@ func TestDisputeMalloryCarol(t *testing.T) {
 		TxAmounts:   [2]*big.Int{big.NewInt(15), big.NewInt(10)},
 	}
 
-	err := clienttest.ExecuteTwoPartyTest(ctx, role, execConfig)
-	assert.NoError(t, err)
-
-	// Check resulting token balance.
-	expectedAssetBalance := [2]*big.Int{big.NewInt(0), big.NewInt(0)}
-	expectedAssetBalance[0].Sub(initAssetBalance[0], big.NewInt(45)) // Only Mallory's payments expected to succeed.
-	expectedAssetBalance[1].Add(initAssetBalance[1], big.NewInt(45))
-	for i := 0; i < len(setup); i++ {
-		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedAssetBalance[i], balance)
-	}
+	clienttest.ExecuteTwoPartyTest(ctx, t, role, execConfig)
 }
