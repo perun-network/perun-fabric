@@ -1,10 +1,22 @@
-// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-package tests
+package test
 
 import (
 	"fmt"
-	"io/ioutil"
+	adj "github.com/perun-network/perun-fabric/adjudicator"
 	"log"
 	"os"
 	"path"
@@ -19,30 +31,46 @@ import (
 )
 
 const (
+	// ChannelName is the name of the fabric channel the clients communicate in.
+	// It is not the state channel.
+	ChannelName = "mychannel"
+	// AdjudicatorName is the adjudicator chaincode name.
+	AdjudicatorName = "adjudicator"
+	// AssetholderName is the assetholder chaincode name.
+	AssetholderName = "assetholder"
+
 	fabricSamplesEnv = "FABRIC_SAMPLES_DIR"
-	ChannelName      = "mychannel"
+	evalTimeout      = 5 * time.Second
+	endorseTimeout   = 15 * time.Second
+	submitTimeout    = 5 * time.Second
+	commitTimeout    = 1 * time.Minute
 )
 
+// Org is a fabric organization.
 type Org string
 
 const (
+	// Org1 indicates demo organization one in fabric-samples.
 	Org1 Org = "org1"
+	// Org2 indicates demo organization two in fabric-samples.
 	Org2 Org = "org2"
 )
 
+// OrgNum returns the organisation identifier.
 func OrgNum(n uint) Org {
 	switch n {
-	case 1, 2:
+	case 1, 2: //nolint:gomnd
 		return Org(fmt.Sprintf("org%d", n))
 	}
 	panic(fmt.Sprintf("invalid org number %d", n))
 }
 
+// Port returns the organisations port.
 func (org Org) Port() string {
 	switch org {
 	case Org1:
 		return "7051"
-	case org:
+	case Org2:
 		return "9051"
 	}
 	panic("invalid org: " + org)
@@ -79,7 +107,7 @@ func keyDir(org Org) string {
 
 func keyPath(org Org) (string, error) {
 	kp := keyDir(org)
-	files, err := ioutil.ReadDir(kp)
+	files, err := os.ReadDir(kp)
 	if err != nil {
 		return "", fmt.Errorf("reading private key directory: %w", err)
 	}
@@ -97,11 +125,11 @@ func NewGrpcConnection(org Org) (*grpc.ClientConn, error) {
 }
 
 // NewIdentity creates a client identity for this Gateway connection using an X.509 certificate.
-func NewIdentity(org Org) (*identity.X509Identity, *wallet.Address, error) {
+func NewIdentity(org Org) (*identity.X509Identity, *wallet.Address, adj.AccountID, error) {
 	return pclient.NewIdentity(mspID(org), certPath(org))
 }
 
-// NewSign creates a function that generates a digital signature from a message digest using a private key.
+// NewAccountWithSigner creates a function that generates a digital signature from a message digest using a private key.
 func NewAccountWithSigner(org Org) (identity.Sign, *wallet.Account, error) {
 	path, err := keyPath(org)
 	if err != nil {
@@ -110,18 +138,19 @@ func NewAccountWithSigner(org Org) (identity.Sign, *wallet.Account, error) {
 	return pclient.NewAccountWithSigner(path)
 }
 
-func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.Account, error) {
-	id, addr, err := NewIdentity(org)
+// NewGateway creates a Gateway for a specific client identity with several timeouts for gRPC calls.
+func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.Account, adj.AccountID, error) {
+	id, addr, onChainID, err := NewIdentity(org)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	sign, acc, err := NewAccountWithSigner(org)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	if acca := acc.Address(); !acca.Equal(addr) {
-		return nil, nil, fmt.Errorf("identity and signer public key mismatch, %v != %v", acca, addr)
+		return nil, nil, "", fmt.Errorf("identity and signer public key mismatch, %v != %v", acca, addr)
 	}
 
 	// Create a Gateway connection for a specific client identity
@@ -130,15 +159,16 @@ func NewGateway(org Org, clientConn *grpc.ClientConn) (*client.Gateway, *wallet.
 		client.WithSign(sign),
 		client.WithClientConnection(clientConn),
 		// Default timeouts for different gRPC calls
-		client.WithEvaluateTimeout(5*time.Second),
-		client.WithEndorseTimeout(15*time.Second),
-		client.WithSubmitTimeout(5*time.Second),
-		client.WithCommitStatusTimeout(1*time.Minute),
+		client.WithEvaluateTimeout(evalTimeout),
+		client.WithEndorseTimeout(endorseTimeout),
+		client.WithSubmitTimeout(submitTimeout),
+		client.WithCommitStatusTimeout(commitTimeout),
 	)
-	return gw, acc, err
+
+	return gw, acc, onChainID, err
 }
 
-// FatalErr prints msg followed by err and then exits the program immedately, if
+// FatalErr prints msg followed by err and then exits the program immediately, if
 // err != nil.
 func FatalErr(msg string, err error) {
 	if err != nil {
@@ -146,7 +176,7 @@ func FatalErr(msg string, err error) {
 	}
 }
 
-// FatalErr prints msg followed by err, if err != nil. The error err is then
+// FatalClientErr prints msg followed by err, if err != nil. The error err is then
 // parsed as a client error and its full details are also printed
 // The program is then exited immedately.
 func FatalClientErr(msg string, err error) {

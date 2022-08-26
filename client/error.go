@@ -1,4 +1,16 @@
-// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package client
 
@@ -32,13 +44,25 @@ func ParseClientErr(err error) string {
 		s.WriteString(fmt.Sprintf("Transaction %s failed to commit with status %d: %s\n", err.TransactionID, int32(err.Code), err))
 	}
 
-	//Any error that originates from a peer or orderer node external to the gateway will have its details
-	//embedded within the gRPC status error. The following code shows how to extract that.
+	// Any error that originates from a peer or orderer node external to the gateway will have its details
+	// embedded within the gRPC status error. The following code shows how to extract that.
 	statusErr := status.Convert(err)
 	for _, detail := range statusErr.Details() {
-		errDetail := detail.(*gwproto.ErrorDetail)
+		errDetail, _ := detail.(*gwproto.ErrorDetail)
 		s.WriteString(fmt.Sprintf("Error from endpoint: %s, mspId: %s, message: %s\n", errDetail.Address, errDetail.MspId, errDetail.Message))
 	}
 
 	return s.String()
+}
+
+// IsChannelUnknownErr checks if the given error indicates the channel is unknown.
+func IsChannelUnknownErr(err error) bool {
+	e := ParseClientErr(err)
+	return strings.Contains(e, "chaincode response 500, unknown channel")
+}
+
+// IsUnderfundedErr checks if the given error indicates the channel is underfunded.
+func IsUnderfundedErr(err error) bool {
+	e := ParseClientErr(err)
+	return strings.Contains(e, "channel underfunded")
 }

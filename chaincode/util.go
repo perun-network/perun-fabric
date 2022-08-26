@@ -1,16 +1,27 @@
-// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 - See NOTICE file for copyright holders.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package chaincode
 
 import (
 	"encoding/json"
 	"fmt"
+	adj "github.com/perun-network/perun-fabric/adjudicator"
 
 	"perun.network/go-perun/wallet"
 
-	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 	_ "github.com/perun-network/perun-fabric" // init backend
-	fabwallet "github.com/perun-network/perun-fabric/wallet"
 )
 
 func stringWithErr(s fmt.Stringer, err error) (string, error) {
@@ -20,14 +31,25 @@ func stringWithErr(s fmt.Stringer, err error) (string, error) {
 	return s.String(), nil
 }
 
+// UnmarshalID unmarshalls a fabric ID.
+func UnmarshalID(idStr string) (adj.AccountID, error) {
+	id := ""
+	if err := json.Unmarshal([]byte(idStr), &id); err != nil {
+		return adj.AccountID(id), fmt.Errorf("json-unmarshaling Client ID: %w", err)
+	}
+	return adj.AccountID(id), nil
+}
+
+// UnmarshalAddress implements custom unmarshalling of wallet addresses.
 func UnmarshalAddress(addrStr string) (wallet.Address, error) {
 	addr := wallet.NewAddress()
-	if err := json.Unmarshal([]byte(addrStr), addr); err != nil {
-		return nil, fmt.Errorf("json-unmarshaling Address: %w", err)
+	if err := json.Unmarshal([]byte(addrStr), &addr); err != nil {
+		return addr, fmt.Errorf("json-unmarshaling Farbic Address: %w", err)
 	}
 	return addr, nil
 }
 
+// UnmarshalAddresses unmarshalls an array of wallet addresses.
 func UnmarshalAddresses(addrsStr string) ([]wallet.Address, error) {
 	var jsonAddrs []json.RawMessage
 	if err := json.Unmarshal([]byte(addrsStr), &jsonAddrs); err != nil {
@@ -43,12 +65,4 @@ func UnmarshalAddresses(addrsStr string) ([]wallet.Address, error) {
 		addrs = append(addrs, addr)
 	}
 	return addrs, nil
-}
-
-func AddressFromTxCtx(ctx contractapi.TransactionContextInterface) (*fabwallet.Address, error) {
-	cert, err := ctx.GetClientIdentity().GetX509Certificate()
-	if err != nil {
-		return nil, fmt.Errorf("getting identity: %w", err)
-	}
-	return fabwallet.AddressFromX509Certificate(cert)
 }

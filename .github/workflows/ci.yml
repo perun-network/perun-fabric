@@ -2,7 +2,7 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
     tags:
   pull_request:
   release:
@@ -14,12 +14,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-        # We use the latest version of golangci-lint here.
-        # This will produce occasional errors in the future when the linters
-        # are updated, but then we always get the newest warnings instead
-        # of having to update the CI manually.
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.48
 
   tests:
     runs-on: ubuntu-latest
@@ -42,5 +40,12 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-      - name: Unit Tests
-        run: go test -timeout 10s ./...
+      - name: Setup and Run Tests
+        run: |
+          cd ..
+          curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/v2.4.6/scripts/bootstrap.sh | bash -s
+          export FABRIC_SAMPLES_DIR=$(pwd)/fabric-samples/
+          cd perun-fabric/
+          ./scripts/deployCC.sh
+          go test -timeout 700s ./... -p 1
+          ./scripts/network.sh down
