@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	chtest "github.com/perun-network/perun-fabric/channel/test"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"perun.network/go-perun/wallet/test"
 	"perun.network/go-perun/watcher/local"
@@ -63,6 +64,7 @@ func TestHappyAliceBob(t *testing.T) {
 		adjs = append(adjs, as)
 	}
 
+	var initAssetBalance [2]*big.Int
 	bus := wire.NewLocalBus()
 	for i := 0; i < len(setup); i++ {
 		// Build role setup for test.
@@ -79,6 +81,10 @@ func TestHappyAliceBob(t *testing.T) {
 			Watcher:           watcher,
 			BalanceReader:     chtest.NewBalanceReader(adjs[i].Binding, adjs[i].ClientFabricID),
 		}
+		// Get current asset balances to use for checks later.
+		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
+		assert.NoError(t, err)
+		initAssetBalance[i] = balance
 	}
 
 	role[A] = clienttest.NewAlice(t, setup[A])
@@ -96,4 +102,14 @@ func TestHappyAliceBob(t *testing.T) {
 	}
 
 	clienttest.ExecuteTwoPartyTest(ctx, t, role, execConfig)
+
+	// Check resulting token balance.
+	expectedAssetBalance := [2]*big.Int{big.NewInt(0), big.NewInt(0)}
+	expectedAssetBalance[A].Sub(initAssetBalance[A], big.NewInt(20))
+	expectedAssetBalance[B].Add(initAssetBalance[B], big.NewInt(20))
+	for i := 0; i < len(setup); i++ {
+		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedAssetBalance[i], balance)
+	}
 }

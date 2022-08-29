@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/perun-network/perun-fabric/channel"
 	chtest "github.com/perun-network/perun-fabric/channel/test"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	pclient "perun.network/go-perun/client"
 	clienttest "perun.network/go-perun/client/test"
@@ -61,6 +62,7 @@ func TestDisputeMalloryCarol(t *testing.T) {
 		adjs = append(adjs, as)
 	}
 
+	var initAssetBalance [2]*big.Int
 	bus := wire.NewLocalBus()
 	for i := 0; i < len(setup); i++ {
 		// Build role setup for test.
@@ -77,6 +79,10 @@ func TestDisputeMalloryCarol(t *testing.T) {
 			Watcher:           watcher,
 			BalanceReader:     chtest.NewBalanceReader(adjs[i].Binding, adjs[i].ClientFabricID),
 		}
+		// Get current asset balances to use for checks later.
+		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
+		assert.NoError(t, err)
+		initAssetBalance[i] = balance
 	}
 
 	role[M] = clienttest.NewMallory(t, setup[M])
@@ -94,4 +100,14 @@ func TestDisputeMalloryCarol(t *testing.T) {
 	}
 
 	clienttest.ExecuteTwoPartyTest(ctx, t, role, execConfig)
+
+	// Check resulting token balance.
+	expectedAssetBalance := [2]*big.Int{big.NewInt(0), big.NewInt(0)}
+	expectedAssetBalance[M].Sub(initAssetBalance[M], big.NewInt(45)) // Only Mallory's payments expected to succeed.
+	expectedAssetBalance[C].Add(initAssetBalance[C], big.NewInt(45))
+	for i := 0; i < len(setup); i++ {
+		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedAssetBalance[i], balance)
+	}
 }
