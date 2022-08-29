@@ -46,7 +46,7 @@ func TestHappyAliceBob(t *testing.T) {
 	defer cancel()
 
 	const (
-		A, B = 0, 1 // Indices of Alice and Bob
+		A, B = 0, 1 // Indices of Alice and Bob.
 	)
 
 	var (

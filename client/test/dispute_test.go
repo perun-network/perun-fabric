@@ -44,7 +44,7 @@ func TestDisputeMalloryCarol(t *testing.T) {
 	defer cancel()
 
 	const (
-		M, C = 0, 1 // Indices of Mallory and Carol
+		M, C = 0, 1 // Indices of Mallory and Carol.
 	)
 
 	var (
