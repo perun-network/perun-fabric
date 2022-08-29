@@ -193,7 +193,7 @@ type BalanceReader struct {
 	id      adj.AccountID
 }
 
-// NewBalanceReader takes the clients binding and its fabric id to create n new BalanceReader.
+// NewBalanceReader takes the clients binding and its fabric id to create a new BalanceReader.
 func NewBalanceReader(binding *binding.Adjudicator, id adj.AccountID) *BalanceReader {
 	return &BalanceReader{
 		binding: binding,

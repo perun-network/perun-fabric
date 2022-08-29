@@ -18,7 +18,6 @@ import (
 	"context"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	"github.com/perun-network/perun-fabric/channel/binding"
-	"math"
 	"perun.network/go-perun/channel"
 	"sync"
 	"time"
@@ -78,8 +77,8 @@ func (f *Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 	}
 
 	// Calculate funding timeout.
-	nsChallengeDur := req.Params.ChallengeDuration * uint64(math.Pow10(9)) //nolint:gomnd // Convert into nanoseconds.
-	wall := time.Now().UTC().Add(time.Duration(nsChallengeDur))
+	challengeDuration := time.Duration(req.Params.ChallengeDuration) * time.Second
+	wall := time.Now().UTC().Add(challengeDuration)
 	timeout := MakeTimeout(wall, f.polling)
 
 	// Wait for Funding completion.
