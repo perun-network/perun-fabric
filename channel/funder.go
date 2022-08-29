@@ -18,8 +18,8 @@ import (
 	"context"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	"github.com/perun-network/perun-fabric/channel/binding"
+	"math"
 	"perun.network/go-perun/channel"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -78,14 +78,12 @@ func (f *Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 	}
 
 	// Calculate funding timeout.
-	chDuration, err := time.ParseDuration(strconv.FormatUint(req.Params.ChallengeDuration, 10) + "s") //nolint:gomnd
-	if err != nil {
-		return err
-	}
-	timeout := time.Now().UTC().Add(chDuration)
+	nsChallengeDur := req.Params.ChallengeDuration * uint64(math.Pow10(9)) //nolint:gomnd // Convert into nanoseconds.
+	wall := time.Now().UTC().Add(time.Duration(nsChallengeDur))
+	timeout := MakeTimeout(wall, f.polling)
 
 	// Wait for Funding completion.
-	return f.awaitFundingComplete(ctx, MakeTimeout(timeout, f.polling), req)
+	return f.awaitFundingComplete(ctx, timeout, req)
 }
 
 // awaitFundingComplete blocks until the funding of the specified channel is complete.
@@ -94,15 +92,16 @@ func (f *Funder) awaitFundingComplete(ctx context.Context, t *Timeout, req chann
 	total := req.State.Allocation.Sum()[assetIdx]
 	for {
 		funded, err := f.binding.TotalHolding(req.State.ID, req.Params.Parts)
-
 		if err != nil {
 			return err
 		}
 
+		// Check if funding completed.
 		if funded.Cmp(total) >= 0 {
 			return nil
 		}
 
+		// Check if funding failed.
 		if t.IsElapsed(ctx) {
 			otherParty := 1 - req.Idx // We only support the two-party case.
 			return channel.NewFundingTimeoutError(
