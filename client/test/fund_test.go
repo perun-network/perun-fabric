@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	fundTestTimeout       = 60 * time.Second
+	fundTestTimeout       = 120 * time.Second
 	fundChallengeDuration = 5
 	fridaHolding          = 100
 	fredHolding           = 100
