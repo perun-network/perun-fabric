@@ -76,21 +76,39 @@ func (f *Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 		return err
 	}
 
+	// Calculate funding timeout.
+	challengeDuration := time.Duration(req.Params.ChallengeDuration) * time.Second
+	wall := time.Now().UTC().Add(challengeDuration)
+	timeout := MakeTimeout(wall, f.polling)
+
 	// Wait for Funding completion.
-	return f.awaitFundingComplete(ctx, req)
+	return f.awaitFundingComplete(ctx, timeout, req)
 }
 
 // awaitFundingComplete blocks until the funding of the specified channel is complete.
-func (f *Funder) awaitFundingComplete(ctx context.Context, req channel.FundingReq) error {
-	total := req.State.Allocation.Sum()[0] // [0] because we are only supporting one asset.
+func (f *Funder) awaitFundingComplete(ctx context.Context, t *Timeout, req channel.FundingReq) error {
+	assetIdx := 0 // We only support one asset.
+	total := req.State.Allocation.Sum()[assetIdx]
 	for {
 		funded, err := f.binding.TotalHolding(req.State.ID, req.Params.Parts)
 		if err != nil {
 			return err
 		}
 
+		// Check if funding completed.
 		if funded.Cmp(total) >= 0 {
 			return nil
+		}
+
+		// Check if funding failed.
+		if t.IsElapsed(ctx) {
+			otherParty := 1 - req.Idx // We only support the two-party case.
+			return channel.NewFundingTimeoutError(
+				[]*channel.AssetFundingError{{
+					Asset:         channel.Index(assetIdx),
+					TimedOutPeers: []channel.Index{otherParty},
+				}},
+			)
 		}
 
 		select {
