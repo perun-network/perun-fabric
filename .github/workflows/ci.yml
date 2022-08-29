@@ -37,6 +37,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - uses: chrisdickinson/setup-yq@v1.0.1
+        with:
+          yq-version: v4.25.3
+
       - name: Vet
         run: go vet ./...
 
@@ -45,6 +49,7 @@ jobs:
           cd ..
           curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/v2.4.6/scripts/bootstrap.sh | bash -s
           export FABRIC_SAMPLES_DIR=$(pwd)/fabric-samples/
+          yq -i '.Orderer.BatchTimeout = "10ms"' $(pwd)/fabric-samples/test-network/configtx/configtx.yaml
           cd perun-fabric/
           ./scripts/deployCC.sh
           go test -timeout 700s ./... -p 1
