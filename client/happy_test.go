@@ -16,33 +16,26 @@ package client_test //nolint:dupl
 
 import (
 	"context"
-	"fmt"
-	chtest "github.com/perun-network/perun-fabric/channel/test"
+	ctest "github.com/perun-network/perun-fabric/client/test"
 	"github.com/stretchr/testify/assert"
 	"math/big"
-	"perun.network/go-perun/wallet/test"
-	"perun.network/go-perun/watcher/local"
 	"testing"
 	"time"
 
+	"github.com/perun-network/perun-fabric/channel"
 	pclient "perun.network/go-perun/client"
 	clienttest "perun.network/go-perun/client/test"
 	"perun.network/go-perun/wire"
-	simplewire "perun.network/go-perun/wire/net/simple"
-
-	"github.com/perun-network/perun-fabric/channel"
-	pkgtest "polycry.pt/poly-go/test"
 )
 
 const (
-	happyTestTimeout = 60 * time.Second
-	aliceHolding     = 100
-	bobHolding       = 100
+	happyTestTimeout  = 60 * time.Second
+	happyChallengeDur = 10
+	aliceHolding      = 100
+	bobHolding        = 100
 )
 
 func TestHappyAliceBob(t *testing.T) {
-	rng := pkgtest.Prng(t)
-
 	ctx, cancel := context.WithTimeout(context.Background(), happyTestTimeout)
 	defer cancel()
 
@@ -51,42 +44,11 @@ func TestHappyAliceBob(t *testing.T) {
 	)
 
 	var (
-		name  = [2]string{"Alice", "Bob"}
+		names = [2]string{"Alice", "Bob"}
 		role  [2]clienttest.Executer
-		setup [2]clienttest.RoleSetup
 	)
 
-	var adjs []*chtest.Session
-	for i := uint(1); i <= 2; i++ {
-		as, err := chtest.NewTestSession(chtest.OrgNum(i), chtest.AdjudicatorName)
-		chtest.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
-		defer as.Close()
-		adjs = append(adjs, as)
-	}
-
-	var initAssetBalance [2]*big.Int
-	bus := wire.NewLocalBus()
-	for i := 0; i < len(setup); i++ {
-		// Build role setup for test.
-		watcher, _ := local.NewWatcher(adjs[i].Adjudicator)
-		setup[i] = clienttest.RoleSetup{
-			Name:              name[i],
-			Identity:          simplewire.NewRandomAccount(rng),
-			Bus:               bus,
-			Funder:            adjs[i].Funder,
-			Adjudicator:       adjs[i].Adjudicator,
-			Wallet:            test.RandomWallet(),
-			Timeout:           30 * time.Second, // Timeout waiting for other role, not challenge duration.
-			ChallengeDuration: 10,
-			Watcher:           watcher,
-			BalanceReader:     chtest.NewBalanceReader(adjs[i].Binding, adjs[i].ClientFabricID),
-		}
-		// Get current asset balances to use for checks later.
-		balance, err := adjs[i].Binding.TokenBalance(adjs[i].ClientFabricID)
-		assert.NoError(t, err)
-		initAssetBalance[i] = balance
-	}
-
+	adjs, setup, initAssetBalance := ctest.SetupClientTest(t, names, happyChallengeDur)
 	role[A] = clienttest.NewAlice(t, setup[A])
 	role[B] = clienttest.NewBob(t, setup[B])
 

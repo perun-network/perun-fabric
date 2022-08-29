@@ -16,19 +16,15 @@ package client_test
 
 import (
 	"context"
-	"fmt"
 	"github.com/perun-network/perun-fabric/channel"
-	chtest "github.com/perun-network/perun-fabric/channel/test"
+	ctest "github.com/perun-network/perun-fabric/client/test"
 	"math/big"
 	"math/rand"
 	pchannel "perun.network/go-perun/channel"
 	clienttest "perun.network/go-perun/client/test"
-	"perun.network/go-perun/wallet/test"
-	"perun.network/go-perun/watcher/local"
 	"perun.network/go-perun/wire"
 	simplewire "perun.network/go-perun/wire/net/simple"
 	wiretest "perun.network/go-perun/wire/test"
-	pkgtest "polycry.pt/poly-go/test"
 	"testing"
 	"time"
 )
@@ -41,42 +37,15 @@ const (
 )
 
 func TestFundRecovery(t *testing.T) {
-	rng := pkgtest.Prng(t)
-
 	ctx, cancel := context.WithTimeout(context.Background(), fundTestTimeout)
 	defer cancel()
 
 	var (
-		name  = [2]string{"Frida", "Fred"}
+		names = [2]string{"Frida", "Fred"}
 		setup [2]clienttest.RoleSetup
 	)
 
-	var adjs []*chtest.Session
-	for i := uint(1); i <= 2; i++ {
-		as, err := chtest.NewTestSession(chtest.OrgNum(i), chtest.AdjudicatorName)
-		chtest.FatalErr(fmt.Sprintf("creating adjudicator session[%d]", i), err)
-		defer as.Close()
-		adjs = append(adjs, as)
-	}
-
-	bus := wire.NewLocalBus()
-	for i := 0; i < len(setup); i++ {
-		// Build role setup for test.
-		watcher, _ := local.NewWatcher(adjs[i].Adjudicator)
-		setup[i] = clienttest.RoleSetup{
-			Name:              name[i],
-			Identity:          simplewire.NewRandomAccount(rng),
-			Bus:               bus,
-			Funder:            adjs[i].Funder,
-			Adjudicator:       adjs[i].Adjudicator,
-			Wallet:            test.RandomWallet(),
-			Timeout:           10 * time.Second, // Timeout waiting for other role, not challenge duration.
-			ChallengeDuration: fundChallengeDuration,
-			Watcher:           watcher,
-			BalanceReader:     chtest.NewBalanceReader(adjs[i].Binding, adjs[i].ClientFabricID),
-		}
-	}
-
+	_, setup, _ = ctest.SetupClientTest(t, names, disputeChallengeDur) // Adjudicator and initial bals not needed.
 	wiretest.SetNewRandomAccount(func(rng *rand.Rand) wire.Account { return simplewire.NewRandomAccount(rng) })
 	clienttest.TestFundRecovery(
 		ctx,
