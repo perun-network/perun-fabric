@@ -62,12 +62,14 @@ func (Backend) Verify(addr wallet.Address, state *channel.State, sig wallet.Sig)
 	return wallet.VerifySignature(buf.Bytes(), sig, addr)
 }
 
-// NewAsset returns an empty noAsset.
+// NewAsset returns a fabric asset.
+// Does not contain any fields since there is only one asset per chain.
 func (Backend) NewAsset() channel.Asset {
 	return asset{}
 }
 
-// NewRandomAsset returns an empty noAsset.
+// NewRandomAsset returns a fabric asset.
+// Does not contain any fields since there is only one asset per chain.
 func (b Backend) NewRandomAsset(*rand.Rand) channel.Asset {
 	return asset{}
 }
