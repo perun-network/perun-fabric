@@ -62,26 +62,12 @@ func (Backend) Verify(addr wallet.Address, state *channel.State, sig wallet.Sig)
 	return wallet.VerifySignature(buf.Bytes(), sig, addr)
 }
 
-// NewAsset returns an empty noAsset.
+// NewAsset returns a new Fabric asset.
 func (Backend) NewAsset() channel.Asset {
-	return noAsset{}
+	return asset{}
 }
 
-// NewRandomAsset returns an empty noAsset.
+// NewRandomAsset returns a new Fabric asset.
 func (b Backend) NewRandomAsset(*rand.Rand) channel.Asset {
-	return noAsset{}
-}
-
-type noAsset struct{}
-
-// MarshalBinary - noop.
-func (noAsset) MarshalBinary() ([]byte, error) { return nil, nil }
-
-// UnmarshalBinary - noop.
-func (noAsset) UnmarshalBinary([]byte) error { return nil }
-
-// Equal returns true iff the other asset is also a noAsset.
-func (noAsset) Equal(other channel.Asset) bool {
-	_, ok := other.(noAsset)
-	return ok
+	return asset{}
 }
