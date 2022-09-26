@@ -62,7 +62,7 @@ func (Backend) Verify(addr wallet.Address, state *channel.State, sig wallet.Sig)
 	return wallet.VerifySignature(buf.Bytes(), sig, addr)
 }
 
-// NewAsset returns a new fabric asset.
+// NewAsset returns a new Fabric asset.
 func (Backend) NewAsset() channel.Asset {
 	return asset{}
 }
