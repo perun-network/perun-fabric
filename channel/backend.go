@@ -67,7 +67,7 @@ func (Backend) NewAsset() channel.Asset {
 	return asset{}
 }
 
-// NewRandomAsset returns a new fabric asset.
+// NewRandomAsset returns a new Fabric asset.
 func (b Backend) NewRandomAsset(*rand.Rand) channel.Asset {
 	return asset{}
 }
